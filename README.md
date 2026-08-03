@@ -959,3 +959,4 @@ if st.button("📩 Enviar brief", type="primary", disabled=not puede_enviar, use
     }
     st.session_state.submitted = True
     st.rerun()
+    
