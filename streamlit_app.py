@@ -1,10 +1,11 @@
 import io
 import zipfile
 import smtplib
-import mimetypes
+import re
 from email.message import EmailMessage
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from xml.sax.saxutils import escape
 
 import streamlit as st
@@ -18,13 +19,12 @@ from reportlab.platypus import (
     Table,
     TableStyle,
     Image as RLImage,
-    KeepTogether,
-    CondPageBreak,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfgen import canvas
+from PIL import Image as PILImage, ImageOps
 
 
 # =========================================================
@@ -113,7 +113,19 @@ ESTILOS_SUGERIDOS = [
     "Otro (especifica)",
 ]
 
-TAMANO_MAX_ADJUNTOS_MB = 20  # aviso si los adjuntos pesan más que esto
+TAMANO_MAX_ADJUNTOS_MB = 15
+TAMANO_MAX_ZIP_CORREO_MB = 18
+
+TIPOS_ADJUNTOS_PERMITIDOS = [
+    "png",
+    "jpg",
+    "jpeg",
+    "webp",
+    "pdf",
+    "svg",
+    "ai",
+    "eps",
+]
 
 
 # =========================================================
@@ -227,13 +239,52 @@ def tam_legible(num_bytes: int) -> str:
         num_bytes /= 1024
     return f"{num_bytes:.1f} TB"
 
+
+def ahora_mexico() -> datetime:
+    return datetime.now(ZoneInfo("America/Mexico_City"))
+
+
 def texto_pdf_seguro(valor) -> str:
-    """Protege textos proporcionados por el usuario antes de enviarlos a ReportLab."""
+    """Escapa texto ingresado por el usuario antes de enviarlo a ReportLab."""
     if valor is None or valor == "":
         return "—"
-
     return escape(str(valor))
 
+
+def texto_canvas_seguro(valor) -> str:
+    """Convierte texto a caracteres compatibles con las fuentes base de ReportLab."""
+    texto = str(valor or "")
+    return texto.encode("cp1252", errors="replace").decode("cp1252")
+
+
+def nombre_archivo_seguro(valor: str, predeterminado: str = "archivo") -> str:
+    """Genera nombres seguros para archivos y rutas internas del ZIP."""
+    nombre = Path(str(valor or "")).name.strip()
+    nombre = re.sub(r"[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ._-]+", "_", nombre)
+    nombre = nombre.strip("._-")
+    return nombre or predeterminado
+
+
+def preparar_imagen_para_pdf(contenido: bytes) -> bytes:
+    """Crea una vista previa ligera para el PDF sin alterar el archivo original del ZIP."""
+    with PILImage.open(io.BytesIO(contenido)) as imagen:
+        imagen = ImageOps.exif_transpose(imagen)
+
+        if getattr(imagen, "is_animated", False):
+            imagen.seek(0)
+
+        if imagen.mode in ("RGBA", "LA"):
+            fondo = PILImage.new("RGB", imagen.size, "white")
+            canal_alpha = imagen.getchannel("A")
+            fondo.paste(imagen.convert("RGB"), mask=canal_alpha)
+            imagen = fondo
+        elif imagen.mode != "RGB":
+            imagen = imagen.convert("RGB")
+
+        imagen.thumbnail((1600, 1200))
+        salida = io.BytesIO()
+        imagen.save(salida, format="JPEG", quality=78, optimize=True)
+        return salida.getvalue()
 
 
 # =========================================================
@@ -315,8 +366,10 @@ class NumberedCanvas(canvas.Canvas):
         self.line(1.3 * cm, 1.20 * cm, width - 1.3 * cm, 1.20 * cm)
         self.setFont("Helvetica", 7.5)
         self.setFillColor(PDF_TEXT)
-        emp_txt = self.empresa if len(self.empresa) <= 36 else self.empresa[:33] + "..."
-        proy_txt = self.proyecto if len(self.proyecto) <= 36 else self.proyecto[:33] + "..."
+        empresa = texto_canvas_seguro(self.empresa)
+        proyecto = texto_canvas_seguro(self.proyecto)
+        emp_txt = empresa if len(empresa) <= 36 else empresa[:33] + "..."
+        proy_txt = proyecto if len(proyecto) <= 36 else proyecto[:33] + "..."
         footer_y = 0.75 * cm
         self.drawString(1.3 * cm, footer_y, f"Empresa: {emp_txt}")
         self.drawCentredString(width / 2, footer_y, f"Proyecto: {proy_txt}")
@@ -357,10 +410,10 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         return Paragraph(str(txt), label_style)
 
     def V(txt):
-    return Paragraph(
-        f"<b>{texto_pdf_seguro(txt)}</b>",
-        value_style,
-    )
+        return Paragraph(
+            f"<b>{texto_pdf_seguro(txt)}</b>",
+            value_style,
+        )
 
     def title_banner():
         t = Table([[Paragraph("BRIEF DE DISEÑO", title_style)],
@@ -411,55 +464,73 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         return box
 
     def imagenes_seccion(titulo, archivos):
-        """archivos: lista de dicts {"nombre":..., "bytes":...} solo imágenes."""
+        """Agrega vistas previas de imágenes al PDF y lista los demás archivos."""
         imgs = [a for a in archivos if es_imagen(a["nombre"])]
         no_imgs = [a for a in archivos if not es_imagen(a["nombre"])]
         flowables = []
+
         if not archivos:
             return flowables
-        cap_tbl = Table([[Paragraph(f"ADJUNTOS — {titulo} ({len(archivos)})", img_caption_style)]],
-                         colWidths=[18.4 * cm])
+
+        cap_tbl = Table(
+            [[Paragraph(
+                f"ADJUNTOS — {texto_pdf_seguro(titulo)} ({len(archivos)})",
+                img_caption_style,
+            )]],
+            colWidths=[18.4 * cm],
+        )
         cap_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), PDF_RED_DARK),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ]))
         flowables.append(Spacer(1, 0.15 * cm))
         flowables.append(cap_tbl)
+
         max_w, max_h = 16.0 * cm, 9.0 * cm
-        for a in imgs:
+
+        for archivo in imgs:
             try:
-                rl_img = RLImage(io.BytesIO(a["bytes"]))
+                preview = preparar_imagen_para_pdf(archivo["bytes"])
+                rl_img = RLImage(io.BytesIO(preview))
                 ratio = rl_img.imageWidth / rl_img.imageHeight
+
                 if ratio > (max_w / max_h):
                     rl_img.drawWidth = max_w
                     rl_img.drawHeight = max_w / ratio
                 else:
                     rl_img.drawHeight = max_h
                     rl_img.drawWidth = max_h * ratio
-                img_wrap = Table([[rl_img]], colWidths=[18.4 * cm])
+
+                nombre_img = texto_pdf_seguro(archivo["nombre"])
+                img_wrap = Table(
+                    [[rl_img], [Paragraph(nombre_img, label_style)]],
+                    colWidths=[18.4 * cm],
+                )
                 img_wrap.setStyle(TableStyle([
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+                    ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
                 ]))
                 flowables.append(img_wrap)
                 flowables.append(Spacer(1, 0.10 * cm))
             except Exception:
-                no_imgs.append(a)
+                no_imgs.append(archivo)
+
         if no_imgs:
-       if no_imgs:
-    nombres = texto_pdf_seguro(
-        ", ".join(a["nombre"] for a in no_imgs)
-    )
-    flowables.append(
-        Paragraph(
-            f"<i>Otros archivos adjuntos en esta sección "
-            f"(incluidos en el .zip por correo): {nombres}</i>",
-            body_style,
-        )
-    )
+            nombres = texto_pdf_seguro(
+                ", ".join(a["nombre"] for a in no_imgs)
+            )
+            flowables.append(Paragraph(
+                f"<i>Otros archivos incluidos en el paquete ZIP: {nombres}</i>",
+                body_style,
+            ))
             flowables.append(Spacer(1, 0.1 * cm))
+
         flowables.append(Spacer(1, 0.1 * cm))
         return flowables
 
@@ -481,7 +552,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
 
     fecha_box = Table([[
         Paragraph("FECHA<br/><font size=7 color='#666'>de envío</font>", label_style),
-        Paragraph(f"<font size=11><b>{datos['fecha']}</b></font>", label_style),
+        Paragraph(f"<font size=11><b>{texto_pdf_seguro(datos['fecha'])}</b></font>", label_style),
     ]], colWidths=[3.0 * cm, 15.4 * cm])
     fecha_box.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.6, PDF_RED), ("BACKGROUND", (0, 0), (0, 0), PDF_LIGHT_BG),
@@ -536,21 +607,15 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
 
     story.append(Spacer(1, 0.3 * cm))
 
-lider_pdf = texto_pdf_seguro(datos["lider_nombre"])
-correo_pdf = texto_pdf_seguro(datos["correo"])
-fecha_pdf = texto_pdf_seguro(datos["fecha"])
+    lider_pdf = texto_pdf_seguro(datos["lider_nombre"])
+    correo_pdf = texto_pdf_seguro(datos["correo"])
+    fecha_pdf = texto_pdf_seguro(datos["fecha"])
 
-aceptacion = Table(
-    [[
-        Paragraph(
-            f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
-            f"({correo_pdf}) el {fecha_pdf}. El material gráfico adjunto "
-            f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
-            body_style,
-        )
-    ]],
-    colWidths=[18.4 * cm],
-)
+    aceptacion = Table([[Paragraph(
+        f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
+        f"({correo_pdf}) el {fecha_pdf}. El material gráfico adjunto "
+        f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
+        body_style)]], colWidths=[18.4 * cm])
     aceptacion.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER), ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
         ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -568,15 +633,46 @@ aceptacion = Table(
 # =========================================================
 # Empaquetado de adjuntos (.zip) y envío de correo
 # =========================================================
-def build_zip_bytes(adjuntos_por_seccion: dict) -> bytes | None:
-    total_archivos = sum(len(v) for v in adjuntos_por_seccion.values())
-    if total_archivos == 0:
-        return None
+def build_zip_bytes(
+    pdf_bytes: bytes,
+    pdf_name: str,
+    adjuntos_por_seccion: dict,
+) -> bytes:
+    """Crea un ZIP con el PDF y todos los archivos originales."""
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    rutas_usadas: set[str] = set()
+
+    def ruta_unica(carpeta: str, nombre: str) -> str:
+        carpeta_segura = nombre_archivo_seguro(carpeta, "Adjuntos")
+        nombre_seguro = nombre_archivo_seguro(nombre)
+        base = Path(nombre_seguro).stem
+        sufijo = Path(nombre_seguro).suffix
+        candidato = f"{carpeta_segura}/{nombre_seguro}"
+        contador = 2
+
+        while candidato.lower() in rutas_usadas:
+            candidato = f"{carpeta_segura}/{base}_{contador}{sufijo}"
+            contador += 1
+
+        rutas_usadas.add(candidato.lower())
+        return candidato
+
+    with zipfile.ZipFile(
+        buffer,
+        mode="w",
+        compression=zipfile.ZIP_DEFLATED,
+    ) as zf:
+        pdf_seguro = nombre_archivo_seguro(pdf_name, "Brief.pdf")
+        zf.writestr(pdf_seguro, pdf_bytes)
+        rutas_usadas.add(pdf_seguro.lower())
+
         for carpeta, archivos in adjuntos_por_seccion.items():
-            for a in archivos:
-                zf.writestr(f"{carpeta}/{a['nombre']}", a["bytes"])
+            for archivo in archivos:
+                zf.writestr(
+                    ruta_unica(carpeta, archivo["nombre"]),
+                    archivo["bytes"],
+                )
+
     return buffer.getvalue()
 
 
@@ -596,53 +692,90 @@ def get_smtp_config():
         return None
 
 
-def enviar_correo(datos, pdf_bytes, zip_bytes, copia_cliente: bool) -> tuple[bool, str]:
+def enviar_correo(
+    datos: dict,
+    zip_bytes: bytes,
+    zip_name: str,
+    copia_cliente: bool,
+) -> tuple[bool, str]:
+    """Envía únicamente el paquete ZIP mediante SMTP SSL."""
     cfg = get_smtp_config()
+
     if cfg is None:
         return False, (
-            "El envío automático de correo aún no está configurado en esta app "
-            "(faltan los 'secrets' de SMTP). Descarga el PDF y el .zip de abajo "
-            "y compártelos manualmente con marketing mientras se configura."
+            "El envío automático aún no está configurado. "
+            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
         )
 
-    destinatarios = [d.strip() for d in cfg["to_email"].split(",") if d.strip()]
-    bcc = [datos["correo"]] if copia_cliente and es_correo_valido(datos["correo"]) else []
+    limite_zip_bytes = TAMANO_MAX_ZIP_CORREO_MB * 1024 * 1024
+    if len(zip_bytes) > limite_zip_bytes:
+        return False, (
+            f"El paquete ZIP pesa {tam_legible(len(zip_bytes))} y supera el límite "
+            f"de {TAMANO_MAX_ZIP_CORREO_MB} MB para envío automático. "
+            "Descárgalo y compártelo manualmente con Marketing."
+        )
+
+    destinatarios = [
+        correo.strip()
+        for correo in str(cfg["to_email"]).split(",")
+        if correo.strip()
+    ]
+    if not destinatarios:
+        return False, "No hay destinatarios configurados en [brief].to_email."
+
+    bcc = []
+    if copia_cliente and es_correo_valido(datos["correo"]):
+        bcc.append(datos["correo"])
 
     msg = EmailMessage()
-    msg["Subject"] = f"Brief de Diseño · {datos['nombre_empresa']} — {datos['nombre_proyecto']}"
+    msg["Subject"] = (
+        f"Brief de Diseño · {datos['nombre_empresa']} — "
+        f"{datos['nombre_proyecto']}"
+    )
     msg["From"] = f"{cfg['from_name']} <{cfg['user']}>"
     msg["To"] = ", ".join(destinatarios)
     msg["Reply-To"] = datos["correo"]
-    cuerpo = (
-        f"Se recibió un nuevo Brief de Diseño (Edición Empresarial).\n\n"
-        f"Empresa: {datos['nombre_empresa']}\n"
-        f"Proyecto: {datos['nombre_proyecto']}\n"
-        f"Líder de proyecto: {datos['lider_nombre']} ({datos['lider_puesto']})\n"
-        f"Celular: {datos['celular']}\n"
-        f"Correo: {datos['correo']}\n\n"
-        f"Se adjunta el brief en PDF"
-        + (" y un .zip con el material gráfico proporcionado." if zip_bytes else ".")
-        + "\n\nEste correo se generó automáticamente desde el link de llenado del brief."
-    )
+
+    cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Empresarial).
+
+Empresa: {datos['nombre_empresa']}
+Proyecto: {datos['nombre_proyecto']}
+Líder de proyecto: {datos['lider_nombre']} ({datos['lider_puesto']})
+Celular: {datos['celular']}
+Correo: {datos['correo']}
+
+El archivo ZIP adjunto contiene el brief completo en PDF y todos los archivos originales proporcionados por el cliente.
+
+Este correo se generó automáticamente desde el formulario del brief."""
     msg.set_content(cuerpo)
+    msg.add_attachment(
+        zip_bytes,
+        maintype="application",
+        subtype="zip",
+        filename=zip_name,
+    )
 
-    nombre_base = f"{datos['nombre_empresa']}_{datos['nombre_proyecto']}".strip("_ ").replace(" ", "_") or "brief"
-    msg.add_attachment(pdf_bytes, maintype="application", subtype="pdf",
-                        filename=f"Brief_{nombre_base}.pdf")
-    if zip_bytes:
-        msg.add_attachment(zip_bytes, maintype="application", subtype="zip",
-                            filename=f"Adjuntos_{nombre_base}.zip")
-
-    todos_destinatarios = destinatarios + bcc
     try:
-        with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=30) as server:
+        with smtplib.SMTP_SSL(
+            cfg["host"],
+            cfg["port"],
+            timeout=30,
+        ) as server:
             server.login(cfg["user"], cfg["password"])
-            server.send_message(msg, to_addrs=todos_destinatarios)
-        return True, "✅ Tu brief se envió correctamente al equipo de marketing."
-    except Exception as e:
+            server.send_message(
+                msg,
+                to_addrs=destinatarios + bcc,
+            )
+
+        return True, (
+            "✅ Tu brief y sus archivos se enviaron correctamente "
+            "al equipo de Marketing."
+        )
+    except Exception as error:
         return False, (
-            f"No se pudo enviar el correo automáticamente ({e}). "
-            "Descarga el PDF y el .zip de abajo y compártelos manualmente con marketing."
+            f"No se pudo enviar el correo automáticamente "
+            f"({type(error).__name__}: {error}). "
+            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
         )
 
 
@@ -651,20 +784,29 @@ def enviar_correo(datos, pdf_bytes, zip_bytes, copia_cliente: bool) -> tuple[boo
 # =========================================================
 if st.session_state.submitted:
     res = st.session_state.submit_result
-    if res.get("email_ok"):
+    email_ok = bool(res.get("email_ok"))
+
+    if email_ok:
         st.success(res.get("email_msg", "✅ Brief enviado correctamente."))
+        mensaje_final = (
+            f"<b>¡Gracias, {escape(str(res.get('lider_nombre', '')))}! 🎉</b><br/>"
+            f"Recibimos el brief de <b>{escape(str(res.get('nombre_empresa', '')))}</b> "
+            f"para el proyecto <b>{escape(str(res.get('nombre_proyecto', '')))}</b>. "
+            "El equipo de diseño de Círculo Tequila lo revisará y se pondrá "
+            "en contacto contigo a la brevedad."
+        )
     else:
-        st.warning(res.get("email_msg", "No se pudo enviar el correo automáticamente."))
+        st.warning(res.get(
+            "email_msg",
+            "No se pudo enviar el correo automáticamente.",
+        ))
+        mensaje_final = (
+            "<b>El paquete fue generado correctamente, pero no se confirmó su envío "
+            "por correo.</b><br/>Descarga el ZIP y compártelo manualmente con Marketing."
+        )
 
     st.markdown(
-        f"""
-        <div class="intro-card">
-            <b>¡Gracias, {res.get('lider_nombre','')}! 🎉</b><br/>
-            Recibimos el brief de <b>{res.get('nombre_empresa','')}</b> para el proyecto
-            <b>{res.get('nombre_proyecto','')}</b>. El equipo de diseño de Círculo Tequila
-            lo revisará y se pondrá en contacto contigo a la brevedad.
-        </div>
-        """,
+        f'<div class="intro-card">{mensaje_final}</div>',
         unsafe_allow_html=True,
     )
 
@@ -678,14 +820,13 @@ if st.session_state.submitted:
             use_container_width=True,
         )
     with colD2:
-        if res.get("zip_bytes"):
-            st.download_button(
-                "⬇️ Descargar adjuntos (.zip)",
-                data=res["zip_bytes"],
-                file_name=res["zip_name"],
-                mime="application/zip",
-                use_container_width=True,
-            )
+        st.download_button(
+            "⬇️ Descargar paquete completo (.zip)",
+            data=res["zip_bytes"],
+            file_name=res["zip_name"],
+            mime="application/zip",
+            use_container_width=True,
+        )
 
     st.markdown("---")
     if st.button("📝 Llenar otro brief", use_container_width=True):
@@ -751,7 +892,7 @@ with st.sidebar:
         "WeTransfer/Drive como respaldo al final del formulario."
     )
     st.markdown("---")
-    st.caption(f"📅 {fecha_es(datetime.now())}")
+    st.caption(f"📅 {fecha_es(ahora_mexico())}")
 
 
 # =========================================================
@@ -812,7 +953,7 @@ with st.container(border=True):
     sin_logo = st.checkbox("No tengo logo — que Círculo Tequila lo diseñe", key=f"sin_logo_{_gen}")
     logo_files = st.file_uploader(
         "Sube tu logo (idealmente en formato vectorial .ai, o imagen en alta resolución)",
-        type=None, accept_multiple_files=True, key=f"logo_files_{_gen}",
+        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"logo_files_{_gen}",
         disabled=sin_logo,
     )
     if logo_files:
@@ -847,7 +988,7 @@ with st.container(border=True):
         height=80, key=f"iconografia_{_gen}")
     iconografia_files = st.file_uploader(
         "Adjuntar referencias de iconografía (opcional)",
-        type=None, accept_multiple_files=True, key=f"iconografia_files_{_gen}")
+        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"iconografia_files_{_gen}")
     if iconografia_files:
         cols_icon = st.columns(min(len(iconografia_files), 3))
         for fi, f in enumerate(iconografia_files):
@@ -869,7 +1010,7 @@ with st.container(border=True):
         height=80, key=f"herramientas_notas_{_gen}")
     herramientas_files = st.file_uploader(
         "Adjuntar imágenes, moodboard o manuales de referencia (opcional)",
-        type=None, accept_multiple_files=True, key=f"herramientas_files_{_gen}")
+        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"herramientas_files_{_gen}")
     if herramientas_files:
         cols_h = st.columns(min(len(herramientas_files), 3))
         for fi, f in enumerate(herramientas_files):
@@ -894,13 +1035,34 @@ with st.container(border=True):
 # =========================================================
 # Validación de tamaño de adjuntos
 # =========================================================
-todos_los_archivos = list(logo_files or []) + list(iconografia_files or []) + list(herramientas_files or [])
-peso_total = sum(len(f.getvalue()) for f in todos_los_archivos)
-if peso_total > TAMANO_MAX_ADJUNTOS_MB * 1024 * 1024:
-    st.warning(
-        f"⚠️ Tus archivos adjuntos pesan {tam_legible(peso_total)} en total. Podrían no llegar "
-        f"completos por correo. Te recomendamos también dejar un link de WeTransfer/Drive arriba "
-        f"como respaldo."
+logo_files_efectivos = [] if sin_logo else list(logo_files or [])
+
+todos_los_archivos = (
+    logo_files_efectivos
+    + list(iconografia_files or [])
+    + list(herramientas_files or [])
+)
+
+peso_total = sum(
+    len(archivo.getvalue())
+    for archivo in todos_los_archivos
+)
+
+peso_total_excedido = (
+    peso_total > TAMANO_MAX_ADJUNTOS_MB * 1024 * 1024
+)
+
+if peso_total_excedido:
+    st.error(
+        f"⚠️ Los archivos seleccionados pesan {tam_legible(peso_total)} en total. "
+        f"El máximo permitido es {TAMANO_MAX_ADJUNTOS_MB} MB. "
+        "Elimina algunos archivos o reduce su tamaño para poder enviar el brief."
+    )
+elif peso_total > 0:
+    st.caption(
+        f"📎 Archivos seleccionados: {len(todos_los_archivos)} · "
+        f"Peso total: {tam_legible(peso_total)} de "
+        f"{TAMANO_MAX_ADJUNTOS_MB} MB permitidos."
     )
 
 
@@ -945,6 +1107,12 @@ if not estilo_deseado.strip():
 if not sin_logo and not logo_files:
     errores.append("• Logo de empresa (adjunta un archivo o marca \"No tengo logo\")")
 
+if peso_total_excedido:
+    errores.append(
+        f"• Los archivos adjuntos superan el límite total de "
+        f"{TAMANO_MAX_ADJUNTOS_MB} MB"
+    )
+
 if not acepto:
     errores.append("• Debes confirmar la casilla de aceptación")
 
@@ -953,9 +1121,14 @@ puede_enviar = len(errores) == 0
 if errores:
     st.warning("⚠️ Antes de enviar, revisa lo siguiente:\n\n" + "\n".join(errores))
 
-if st.button("📩 Enviar brief", type="primary", disabled=not puede_enviar, use_container_width=True):
+if st.button(
+    "📩 Enviar brief",
+    type="primary",
+    disabled=not puede_enviar,
+    use_container_width=True,
+):
     datos = {
-        "fecha": fecha_es(datetime.now()),
+        "fecha": fecha_es(ahora_mexico()),
         "nombre_empresa": nombre_empresa.strip(),
         "nombre_proyecto": nombre_proyecto.strip(),
         "pagina_web": pagina_web.strip(),
@@ -967,7 +1140,7 @@ if st.button("📩 Enviar brief", type="primary", disabled=not puede_enviar, use
         "cantidad_375": str(int(cantidad_375)),
         "cantidad_750": str(int(cantidad_750)),
         "objetivo_diseno": objetivo_diseno.strip(),
-        "tiene_logo": bool(logo_files),
+        "tiene_logo": bool(logo_files_efectivos),
         "frase_eslogan": frase_eslogan.strip(),
         "paleta_colores": paleta_colores.strip(),
         "estilo_deseado": estilo_deseado.strip(),
@@ -979,27 +1152,70 @@ if st.button("📩 Enviar brief", type="primary", disabled=not puede_enviar, use
     }
 
     adjuntos_por_seccion = {
-        "Logo": [{"nombre": f.name, "bytes": f.getvalue()} for f in (logo_files or [])],
-        "Iconografia": [{"nombre": f.name, "bytes": f.getvalue()} for f in (iconografia_files or [])],
-        "Referencias": [{"nombre": f.name, "bytes": f.getvalue()} for f in (herramientas_files or [])],
+        "Logo": [
+            {"nombre": f.name, "bytes": f.getvalue()}
+            for f in logo_files_efectivos
+        ],
+        "Iconografia": [
+            {"nombre": f.name, "bytes": f.getvalue()}
+            for f in (iconografia_files or [])
+        ],
+        "Referencias": [
+            {"nombre": f.name, "bytes": f.getvalue()}
+            for f in (herramientas_files or [])
+        ],
     }
 
-    with st.spinner("Generando tu brief y enviándolo a marketing..."):
-        pdf_bytes = build_brief_pdf(datos, adjuntos_por_seccion)
-        zip_bytes = build_zip_bytes(adjuntos_por_seccion)
-        email_ok, email_msg = enviar_correo(datos, pdf_bytes, zip_bytes, copia_cliente)
+    empresa_archivo = nombre_archivo_seguro(
+        datos["nombre_empresa"],
+        "Empresa",
+    )
+    proyecto_archivo = nombre_archivo_seguro(
+        datos["nombre_proyecto"],
+        "Proyecto",
+    )
+    nombre_base = f"{empresa_archivo}_{proyecto_archivo}"
+    pdf_name = f"Brief_{nombre_base}.pdf"
+    zip_name = f"Paquete_Brief_{nombre_base}.zip"
 
-    nombre_base = f"{datos['nombre_empresa']}_{datos['nombre_proyecto']}".strip("_ ").replace(" ", "_") or "brief"
+    try:
+        with st.spinner(
+            "Generando el PDF, preparando los archivos y enviándolos a Marketing..."
+        ):
+            pdf_bytes = build_brief_pdf(
+                datos,
+                adjuntos_por_seccion,
+            )
+            zip_bytes = build_zip_bytes(
+                pdf_bytes,
+                pdf_name,
+                adjuntos_por_seccion,
+            )
+            email_ok, email_msg = enviar_correo(
+                datos,
+                zip_bytes,
+                zip_name,
+                copia_cliente,
+            )
+    except Exception as error:
+        st.error(
+            "No fue posible generar el paquete del brief. "
+            "Revisa los archivos adjuntos e inténtalo nuevamente."
+        )
+        st.caption(f"Detalle técnico: {type(error).__name__}: {error}")
+        st.stop()
+
     st.session_state.submit_result = {
         "email_ok": email_ok,
         "email_msg": email_msg,
         "pdf_bytes": pdf_bytes,
-        "pdf_name": f"Brief_{nombre_base}.pdf",
+        "pdf_name": pdf_name,
         "zip_bytes": zip_bytes,
-        "zip_name": f"Adjuntos_{nombre_base}.zip",
+        "zip_name": zip_name,
         "lider_nombre": datos["lider_nombre"],
         "nombre_empresa": datos["nombre_empresa"],
         "nombre_proyecto": datos["nombre_proyecto"],
     }
     st.session_state.submitted = True
     st.rerun()
+    
