@@ -5,6 +5,7 @@ import mimetypes
 from email.message import EmailMessage
 from datetime import datetime
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import streamlit as st
 
@@ -226,6 +227,14 @@ def tam_legible(num_bytes: int) -> str:
         num_bytes /= 1024
     return f"{num_bytes:.1f} TB"
 
+def texto_pdf_seguro(valor) -> str:
+    """Protege textos proporcionados por el usuario antes de enviarlos a ReportLab."""
+    if valor is None or valor == "":
+        return "—"
+
+    return escape(str(valor))
+
+
 
 # =========================================================
 # Session State init
@@ -319,7 +328,7 @@ class NumberedCanvas(canvas.Canvas):
 
 
 def _P(txt, style):
-    return Paragraph(txt if txt else "—", style)
+    return Paragraph(texto_pdf_seguro(txt), style)
 
 
 def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
@@ -348,7 +357,10 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         return Paragraph(str(txt), label_style)
 
     def V(txt):
-        return Paragraph(f"<b>{txt if txt else '—'}</b>", value_style)
+    return Paragraph(
+        f"<b>{texto_pdf_seguro(txt)}</b>",
+        value_style,
+    )
 
     def title_banner():
         t = Table([[Paragraph("BRIEF DE DISEÑO", title_style)],
@@ -436,10 +448,17 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
             except Exception:
                 no_imgs.append(a)
         if no_imgs:
-            nombres = ", ".join(a["nombre"] for a in no_imgs)
-            flowables.append(Paragraph(
-                f"<i>Otros archivos adjuntos en esta sección (incluidos en el .zip por correo): {nombres}</i>",
-                body_style))
+       if no_imgs:
+    nombres = texto_pdf_seguro(
+        ", ".join(a["nombre"] for a in no_imgs)
+    )
+    flowables.append(
+        Paragraph(
+            f"<i>Otros archivos adjuntos en esta sección "
+            f"(incluidos en el .zip por correo): {nombres}</i>",
+            body_style,
+        )
+    )
             flowables.append(Spacer(1, 0.1 * cm))
         flowables.append(Spacer(1, 0.1 * cm))
         return flowables
@@ -516,11 +535,22 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         story.extend(imagenes_seccion(titulo, archivos))
 
     story.append(Spacer(1, 0.3 * cm))
-    aceptacion = Table([[Paragraph(
-        f"<i>Brief confirmado digitalmente por <b>{datos['lider_nombre']}</b> "
-        f"({datos['correo']}) el {datos['fecha']}. El material gráfico adjunto "
-        f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
-        body_style)]], colWidths=[18.4 * cm])
+
+lider_pdf = texto_pdf_seguro(datos["lider_nombre"])
+correo_pdf = texto_pdf_seguro(datos["correo"])
+fecha_pdf = texto_pdf_seguro(datos["fecha"])
+
+aceptacion = Table(
+    [[
+        Paragraph(
+            f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
+            f"({correo_pdf}) el {fecha_pdf}. El material gráfico adjunto "
+            f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
+            body_style,
+        )
+    ]],
+    colWidths=[18.4 * cm],
+)
     aceptacion.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER), ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
         ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
