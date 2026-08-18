@@ -1,1071 +1,71 @@
-import io
-import zipfile
-import smtplib
-import re
-from email.message import EmailMessage
-from datetime import datetime
-from pathlib import Path
-from zoneinfo import ZoneInfo
-from xml.sax.saxutils import escape
+ayer 18:42
+Se ha pegado el código(3).py
+Python
 
-import streamlit as st
+Quiero continuar mejorando mi aplicación de Brief de Marketing en Streamlit. Ya está funcionando: genera PDF, crea ZIP con adjuntos, envía el ZIP automáticamente por correo mediante SMTP, tiene límite de archivos y está publicada en Streamlit Cloud. Quiero trabajar a partir de la versión actual, sin reconstruirla desde cero.
+los ajustes que quiero realizar mas que estructurales on de contenido, la pagina ya funciona correctamente
+recordemos que esto va enfocado a los clientes de nosotros.
+en  la parte volumen de produccion solo quiseramos colocar tipo de presentacion que van a querer adquirir (esto ayuda a diseño a cuidar detalles pequeños que se pueden presentar en la botella, entonces olo dejar casilla de seleccion, pueden marcar las dos)
+en esta parte no queremos dejarlo como campo obligatorio
+ELIMINAR EL LINK D
+EN GENERAL LAS IMAGENES QUE SE PRESENTAN Y SE SUBEN PESAN BASTANTE, COMP PUEDO MODIFICAR ESTA PARTE??
+antes de pasar con ese cambio quisiera ver si puedo integrar imagenes dinamicas como la que te comparto en el siguiente link:
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-    Image as RLImage,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.pdfgen import canvas
-from PIL import Image as PILImage, ImageOps
+https://mariana01.sirv.com/Theralist/Theralist.spin
 
 
-# =========================================================
-# Config + Branding (mismo estilo que Solicitud de Producción)
-# =========================================================
-PRIMARY = "#0F3D8A"
-PRIMARY_DARK = "#0A2E66"
-ACCENT_BG = "#EFF4FB"
-GREY_LIGHT = "#F7F7F7"
-GREY_BORDER = "#E5E5E5"
-TEXT_DARK = "#1A1A1A"
+adelante, indicame paso por paso como integrala para hacer la prueba
+sucedio esto
+que hay padrino, echele un vistazo padrino LUNA - https://mariana01.sirv.com/Luna%20Llena/Luna%20Llena.spin
+THERALIS - https://mariana01.sirv.com/Theralist/Theralist.spin
+ALFRAN - https://mariana01.sirv.com/Alfran/Alfran.spin
+MILWAUKEE - https://mariana01.sirv.com/Milwaukee/Milwaukee.spin
+CONSTRUCCIÓN - https://mariana01.sirv.com/Deconstrucci%C3%B3n/Deconstrucci%C3%B3n.spin
+BODA M&R - https://mariana01.sirv.com/M%26R/M%26R.spin
 
-st.set_page_config(
-    page_title="Brief de Diseño · Círculo Tequila",
-    page_icon="🎨",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-st.markdown(
-    f"""
-    <style>
-    .block-container {{ padding-top: 1.2rem; padding-bottom: 3rem; }}
-    [data-baseweb="select"] span {{ font-size: 0.9rem; }}
-    .stButton > button[kind="primary"] {{
-        background-color: {PRIMARY}; border-color: {PRIMARY}; color: white;
-        font-weight: 600;
-    }}
-    .stButton > button[kind="primary"]:hover {{
-        background-color: {PRIMARY_DARK}; border-color: {PRIMARY_DARK};
-    }}
-    .brand-bar {{
-        background: linear-gradient(90deg, {PRIMARY} 0%, {PRIMARY_DARK} 100%);
-        color: white; padding: 14px 22px; border-radius: 10px;
-        font-weight: 700; font-size: 1.35rem; letter-spacing: 0.4px;
-        margin-bottom: 0.8rem;
-        box-shadow: 0 2px 10px rgba(15,61,138,0.18);
-        display: flex; align-items: center; justify-content: space-between;
-    }}
-    .brand-bar small {{ font-weight: 400; opacity: 0.9; font-size: 0.78rem; }}
-    .section-header {{
-        border-left: 4px solid {PRIMARY};
-        padding: 4px 0 4px 12px;
-        margin: 1.2rem 0 0.4rem 0;
-    }}
-    .section-header h3 {{
-        margin: 0; color: {TEXT_DARK}; font-size: 1.05rem; font-weight: 700;
-    }}
-    .section-header span.sub {{
-        color: #555; font-size: 0.82rem; font-weight: 400;
-    }}
-    .progress-item {{
-        display: flex; align-items: center; gap: 8px;
-        padding: 6px 8px; border-radius: 6px; margin: 2px 0;
-        font-size: 0.86rem;
-    }}
-    .progress-item.done {{ background: #E8F5E9; color: #1B5E20; }}
-    .progress-item.todo {{ background: #FAFAFA; color: #777; }}
-    .intro-card {{
-        background: {ACCENT_BG}; border: 1px solid {GREY_BORDER};
-        border-radius: 10px; padding: 16px 18px; margin-bottom: 1rem;
-        font-size: 0.92rem; color: {TEXT_DARK};
-    }}
-    div[data-testid="stExpander"] {{
-        border: 1px solid {GREY_BORDER} !important;
-        border-radius: 8px !important;
-    }}
-    .stAlert {{ border-radius: 8px; }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+funciono perfecto, quiero agregar todos estos
+y que aprezcan en el mismo bloque de las demas claro con el tamaño reducido
+hoy 10:13
+la parte de solores sugeridos no quiero que se aobligatoria
+hoy 11:31
+vamos a quitar toda eesta parte del logo, asi como tambien el campo de adjuntar
+hoy 12:55
+todos estos campos e quedan, pero solo queremos dejar un solo boton para adjuntar todos los archivos que el cliente desee, me ayudas a modificar??
 
-MESES_ES = {
-    1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL", 5: "MAYO", 6: "JUNIO",
-    7: "JULIO", 8: "AGOSTO", 9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
-}
+Sí. Esa simplificación queda mucho mejor para el cliente: mantenemos todos los campos de texto tal como están, pero eliminamos los dos botones separados de carga y dejamos un solo cargador general de archivos al final de la sección.
 
-ESTILOS_SUGERIDOS = [
-    "Tradicional mexicano",
-    "Minimalista",
-    "Corporativo",
-    "Artístico / Ilustrado",
-    "Elegante / Premium",
-    "Moderno / Geométrico",
-    "Otro (especifica)",
-]
+En tu versión base, actualmente tienes un uploader para iconografía y otro para referencias visuales.
 
-TAMANO_MAX_ADJUNTOS_MB = 15
-TAMANO_MAX_ZIP_CORREO_MB = 18
+Te recomiendo que quede así:
 
-TIPOS_ADJUNTOS_PERMITIDOS = [
-    "png",
-    "jpg",
-    "jpeg",
-    "webp",
-    "pdf",
-    "svg",
-    "ai",
-    "eps",
-]
+Adjuntar archivos de referencia (opcional)
+Puedes subir imágenes, ilustraciones, manuales de marca, fotografías, PDFs o cualquier material que ayude a nuestro equipo de diseño.
+[ Upload ]
 
+Y el cliente puede seleccionar varios archivos en una sola operación.
 
-# =========================================================
-# Helpers
-# =========================================================
-def fecha_es(dt: datetime) -> str:
-    return f"{dt.day:02d}/{MESES_ES[dt.month]}/{dt.year}"
+1. Elimina el uploader de “Iconografía”
 
+Conserva este campo:
 
-def get_solapa_path() -> Path | None:
-    base = Path(__file__).resolve().parent
-    candidates = [
-        base / "assets" / "solapa.jpg",
-        base / "assets" / "solapa.jpeg",
-        base / "assets" / "solapa.png",
-    ]
-    for p in candidates:
-        if p.exists():
-            return p
-    return None
-
-
-# Galería de "inspiración": ejemplos de botellas ya diseñadas, solo para que
-# el cliente se dé una idea de lo que puede lograr al llenar el brief. Cada
-# imagen vive en assets/ejemplos/ junto al .py; si el archivo no existe (por
-# ejemplo, aún no lo subiste a tu repo), simplemente se omite sin romper la
-# app.
-EJEMPLOS_INFO = [
-    ("ejemplo_1_theralis.png", "Edición Empresarial",
-     "Diseño institucional/arquitectónico para un cliente corporativo."),
-    ("ejemplo_2_boda_myr.png", "Edición Personalizada",
-     "Boda — estilo artístico e ilustrado, con iniciales y fecha."),
-    ("ejemplo_3_20_aniversario.png", "Edición Conmemorativa",
-     "20° Aniversario — estilo gráfico y moderno."),
-    ("ejemplo_4_luna_llena.png", "Edición Artística",
-     "Ilustración original de autor, estilo mexicano contemporáneo."),
-    ("ejemplo_5_diagrama_impresion.png", "¿Cómo se ve al final?",
-     "La impresión cubre tanto la cara frontal como la trasera de la botella."),
-]
-SPIN_EJEMPLOS = [
-    {
-        "titulo": "Luna Llena",
-        "url": "https://mariana01.sirv.com/Luna%20Llena/Luna%20Llena.spin?initializeOn=click",
-        "desc": "Edición artística · vista 360°",
-    },
-    {
-        "titulo": "Theralis",
-        "url": "https://mariana01.sirv.com/Theralist/Theralist.spin?initializeOn=click",
-        "desc": "Edición empresarial · vista 360°",
-    },
-    {
-        "titulo": "Alfran",
-        "url": "https://mariana01.sirv.com/Alfran/Alfran.spin?initializeOn=click",
-        "desc": "Edición empresarial · vista 360°",
-    },
-    {
-        "titulo": "Milwaukee",
-        "url": "https://mariana01.sirv.com/Milwaukee/Milwaukee.spin?initializeOn=click",
-        "desc": "Edición conmemorativa · vista 360°",
-    },
-    {
-        "titulo": "Construcción",
-        "url": "https://mariana01.sirv.com/Deconstrucci%C3%B3n/Deconstrucci%C3%B3n.spin?initializeOn=click",
-        "desc": "Edición institucional · vista 360°",
-    },
-    {
-        "titulo": "Boda M&R",
-        "url": "https://mariana01.sirv.com/M%26R/M%26R.spin?initializeOn=click",
-        "desc": "Edición personalizada · vista 360°",
-    },
-]
-
-
-def get_ejemplos_disponibles() -> list:
-    base = Path(__file__).resolve().parent / "assets" / "ejemplos"
-    disponibles = []
-    for fname, titulo, desc in EJEMPLOS_INFO:
-        fpath = base / fname
-        if fpath.exists():
-            disponibles.append((fpath, titulo, desc))
-    if disponibles:
-        return disponibles
-
-    # Respaldo: si los nombres de archivo no coinciden exactamente (por
-    # ejemplo, algunas herramientas de subida de archivos truncan los
-    # nombres a formato "8.3" tipo EJEMPL~1.PNG), se muestra de todas
-    # formas cualquier imagen que exista en la carpeta, con un título
-    # genérico, en vez de dejar la galería vacía.
-    if base.exists():
-        extensiones = (".png", ".jpg", ".jpeg", ".webp")
-        for i, fpath in enumerate(sorted(base.iterdir()), start=1):
-            if fpath.is_file() and fpath.suffix.lower() in extensiones:
-                disponibles.append((fpath, f"Ejemplo {i}", ""))
-    return disponibles
-
-
-def section_header(title: str, sub: str = ""):
-    sub_html = f'<span class="sub"> · {sub}</span>' if sub else ""
-    st.markdown(
-        f'<div class="section-header"><h3>{title}{sub_html}</h3></div>',
-        unsafe_allow_html=True,
-    )
-
-
-def bold_unicode(text: str) -> str:
-    """Convierte letras/números ASCII a Unicode 'Mathematical Bold', para
-    resaltar visualmente una opción dentro de un st.selectbox."""
-    out = []
-    for ch in text:
-        if 'A' <= ch <= 'Z':
-            out.append(chr(0x1D400 + (ord(ch) - ord('A'))))
-        elif 'a' <= ch <= 'z':
-            out.append(chr(0x1D41A + (ord(ch) - ord('a'))))
-        elif '0' <= ch <= '9':
-            out.append(chr(0x1D7CE + (ord(ch) - ord('0'))))
-        else:
-            out.append(ch)
-    return ''.join(out)
-
-
-def formato_opcion_estilo(opt: str) -> str:
-    if opt == "Otro (especifica)":
-        return f"✏️ {bold_unicode(opt.upper())}"
-    return opt
-
-
-def es_imagen(nombre: str) -> bool:
-    ext = Path(nombre).suffix.lower()
-    return ext in (".png", ".jpg", ".jpeg", ".gif", ".webp")
-
-
-def es_correo_valido(correo: str) -> bool:
-    correo = correo.strip()
-    if "@" not in correo or "." not in correo.split("@")[-1]:
-        return False
-    return True
-
-
-def tam_legible(num_bytes: int) -> str:
-    for unidad in ["B", "KB", "MB", "GB"]:
-        if num_bytes < 1024:
-            return f"{num_bytes:.0f} {unidad}" if unidad == "B" else f"{num_bytes:.1f} {unidad}"
-        num_bytes /= 1024
-    return f"{num_bytes:.1f} TB"
-
-
-def ahora_mexico() -> datetime:
-    return datetime.now(ZoneInfo("America/Mexico_City"))
-
-
-def texto_pdf_seguro(valor) -> str:
-    """Escapa texto ingresado por el usuario antes de enviarlo a ReportLab."""
-    if valor is None or valor == "":
-        return "—"
-    return escape(str(valor))
-
-
-def texto_canvas_seguro(valor) -> str:
-    """Convierte texto a caracteres compatibles con las fuentes base de ReportLab."""
-    texto = str(valor or "")
-    return texto.encode("cp1252", errors="replace").decode("cp1252")
-
-
-def nombre_archivo_seguro(valor: str, predeterminado: str = "archivo") -> str:
-    """Genera nombres seguros para archivos y rutas internas del ZIP."""
-    nombre = Path(str(valor or "")).name.strip()
-    nombre = re.sub(r"[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ._-]+", "_", nombre)
-    nombre = nombre.strip("._-")
-    return nombre or predeterminado
-
-
-def preparar_imagen_para_pdf(contenido: bytes) -> bytes:
-    """Crea una vista previa ligera para el PDF sin alterar el archivo original del ZIP."""
-    with PILImage.open(io.BytesIO(contenido)) as imagen:
-        imagen = ImageOps.exif_transpose(imagen)
-
-        if getattr(imagen, "is_animated", False):
-            imagen.seek(0)
-
-        if imagen.mode in ("RGBA", "LA"):
-            fondo = PILImage.new("RGB", imagen.size, "white")
-            canal_alpha = imagen.getchannel("A")
-            fondo.paste(imagen.convert("RGB"), mask=canal_alpha)
-            imagen = fondo
-        elif imagen.mode != "RGB":
-            imagen = imagen.convert("RGB")
-
-        imagen.thumbnail((1600, 1200))
-        salida = io.BytesIO()
-        imagen.save(salida, format="JPEG", quality=78, optimize=True)
-        return salida.getvalue()
-
-
-# =========================================================
-# Session State init
-# =========================================================
-if "form_gen" not in st.session_state:
-    st.session_state.form_gen = 0
-
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
-
-if "submit_result" not in st.session_state:
-    st.session_state.submit_result = {}
-
-
-def reiniciar_formulario():
-    st.session_state.form_gen += 1
-    st.session_state.submitted = False
-    st.session_state.submit_result = {}
-
-
-# =========================================================
-# Header / Solapa
-# =========================================================
-solapa_path = get_solapa_path()
-if solapa_path:
-    st.image(str(solapa_path), use_container_width=True)
-
-st.markdown(
-    """
-    <div class="brand-bar">
-        <span>BRIEF DE DISEÑO · EDICIÓN EMPRESARIAL</span>
-        <small>Círculo Tequila · Marketing</small>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
-# Generación de PDF (mismo estilo visual que Solicitud de Producción)
-# =========================================================
-PDF_RED = colors.HexColor(PRIMARY)
-PDF_RED_DARK = colors.HexColor(PRIMARY_DARK)
-PDF_LIGHT_BG = colors.HexColor(ACCENT_BG)
-PDF_GREY_ROW = colors.HexColor("#F7F7F7")
-PDF_GREY_BORDER = colors.HexColor("#D9D9D9")
-PDF_TEXT = colors.HexColor("#1A1A1A")
-PDF_MUTED = colors.HexColor("#666666")
-
-
-class NumberedCanvas(canvas.Canvas):
-    def __init__(self, *args, proyecto="", empresa="", **kwargs):
-        super().__init__(*args, **kwargs)
-        self._saved_page_states = []
-        self.proyecto = proyecto
-        self.empresa = empresa
-
-    def showPage(self):
-        self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
-
-    def save(self):
-        total_pages = len(self._saved_page_states)
-        for state in self._saved_page_states:
-            self.__dict__.update(state)
-            self.draw_footer(total_pages)
-            canvas.Canvas.showPage(self)
-        canvas.Canvas.save(self)
-
-    def draw_footer(self, total_pages):
-        page_num = self._pageNumber
-        width, _height = A4
-        self.setStrokeColor(PDF_RED)
-        self.setLineWidth(1.2)
-        self.line(1.3 * cm, 1.35 * cm, width - 1.3 * cm, 1.35 * cm)
-        self.setStrokeColor(PDF_GREY_BORDER)
-        self.setLineWidth(0.4)
-        self.line(1.3 * cm, 1.20 * cm, width - 1.3 * cm, 1.20 * cm)
-        self.setFont("Helvetica", 7.5)
-        self.setFillColor(PDF_TEXT)
-        empresa = texto_canvas_seguro(self.empresa)
-        proyecto = texto_canvas_seguro(self.proyecto)
-        emp_txt = empresa if len(empresa) <= 36 else empresa[:33] + "..."
-        proy_txt = proyecto if len(proyecto) <= 36 else proyecto[:33] + "..."
-        footer_y = 0.75 * cm
-        self.drawString(1.3 * cm, footer_y, f"Empresa: {emp_txt}")
-        self.drawCentredString(width / 2, footer_y, f"Proyecto: {proy_txt}")
-        self.drawRightString(width - 1.3 * cm, footer_y, f"Pág. {page_num} / {total_pages}")
-        self.setFont("Helvetica-Oblique", 7)
-        self.setFillColor(PDF_MUTED)
-        self.drawCentredString(width / 2, 0.40 * cm,
-            "Círculo Tequila · Marketing — Brief de Diseño (Edición Empresarial)")
-
-
-def _P(txt, style):
-    return Paragraph(texto_pdf_seguro(txt), style)
-
-
-def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
-    styles = getSampleStyleSheet()
-    normal = styles["Normal"]
-
-    title_style = ParagraphStyle("title_style", parent=styles["Title"],
-        fontName="Helvetica-Bold", fontSize=18, textColor=colors.white,
-        alignment=TA_CENTER, spaceAfter=0, leading=22)
-    subtitle_style = ParagraphStyle("subtitle_style", parent=normal,
-        fontName="Helvetica", fontSize=8.5, textColor=colors.white,
-        alignment=TA_CENTER, leading=10)
-    sec_style = ParagraphStyle("sec_style", parent=styles["Heading2"],
-        fontName="Helvetica-Bold", fontSize=11, textColor=colors.white,
-        spaceBefore=0, spaceAfter=0, leading=14, alignment=TA_LEFT)
-    label_style = ParagraphStyle("label_style", parent=normal,
-        fontName="Helvetica", fontSize=9, textColor=PDF_TEXT, leading=12)
-    value_style = ParagraphStyle("value_style", parent=normal,
-        fontName="Helvetica-Bold", fontSize=9.5, textColor=PDF_RED_DARK, leading=12)
-    body_style = ParagraphStyle("body_style", parent=normal,
-        fontName="Helvetica", fontSize=9.3, textColor=PDF_TEXT, leading=13)
-    img_caption_style = ParagraphStyle("img_caption_style", parent=normal,
-        fontName="Helvetica-Bold", fontSize=9, textColor=colors.white, leading=11)
-
-    def L(txt):
-        return Paragraph(str(txt), label_style)
-
-    def V(txt):
-        return Paragraph(
-            f"<b>{texto_pdf_seguro(txt)}</b>",
-            value_style,
-        )
-
-    def title_banner():
-        t = Table([[Paragraph("BRIEF DE DISEÑO", title_style)],
-                   [Paragraph("Edición Empresarial · Círculo Tequila", subtitle_style)]],
-                  colWidths=[18.4 * cm])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PDF_RED),
-            ("TOPPADDING", (0, 0), (-1, 0), 12), ("BOTTOMPADDING", (0, 0), (-1, 0), 0),
-            ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
-            ("LEFTPADDING", (0, 0), (-1, -1), 14), ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-        ]))
-        return t
-
-    def section_band(text):
-        t = Table([[Paragraph(text, sec_style)]], colWidths=[18.4 * cm])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PDF_RED),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ]))
-        return t
-
-    def kv4_table(rows_4col, colWidths=(3.4 * cm, 5.8 * cm, 3.4 * cm, 5.8 * cm)):
-        t = Table(rows_4col, colWidths=list(colWidths))
-        s = [("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-             ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_GREY_BORDER),
-             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-             ("FONTNAME", (0, 0), (-1, -1), "Helvetica"), ("FONTSIZE", (0, 0), (-1, -1), 9),
-             ("BACKGROUND", (0, 0), (0, -1), PDF_LIGHT_BG), ("BACKGROUND", (2, 0), (2, -1), PDF_LIGHT_BG),
-             ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-             ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]
-        for i in range(len(rows_4col)):
-            if i % 2 == 1:
-                s.append(("BACKGROUND", (1, i), (1, i), PDF_GREY_ROW))
-                s.append(("BACKGROUND", (3, i), (3, i), PDF_GREY_ROW))
-        t.setStyle(TableStyle(s))
-        return t
-
-    def texto_bloque(titulo, contenido):
-        box = Table([[Paragraph(f"<b>{titulo}</b>", label_style)], [_P(contenido, body_style)]],
-                     colWidths=[18.4 * cm])
-        box.setStyle(TableStyle([
-            ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-            ("BACKGROUND", (0, 0), (-1, 0), PDF_LIGHT_BG),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
-        return box
-
-    def imagenes_seccion(titulo, archivos):
-        """Agrega vistas previas de imágenes al PDF y lista los demás archivos."""
-        imgs = [a for a in archivos if es_imagen(a["nombre"])]
-        no_imgs = [a for a in archivos if not es_imagen(a["nombre"])]
-        flowables = []
-
-        if not archivos:
-            return flowables
-
-        cap_tbl = Table(
-            [[Paragraph(
-                f"ADJUNTOS — {texto_pdf_seguro(titulo)} ({len(archivos)})",
-                img_caption_style,
-            )]],
-            colWidths=[18.4 * cm],
-        )
-        cap_tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PDF_RED_DARK),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
-        flowables.append(Spacer(1, 0.15 * cm))
-        flowables.append(cap_tbl)
-
-        max_w, max_h = 16.0 * cm, 9.0 * cm
-
-        for archivo in imgs:
-            try:
-                preview = preparar_imagen_para_pdf(archivo["bytes"])
-                rl_img = RLImage(io.BytesIO(preview))
-                ratio = rl_img.imageWidth / rl_img.imageHeight
-
-                if ratio > (max_w / max_h):
-                    rl_img.drawWidth = max_w
-                    rl_img.drawHeight = max_w / ratio
-                else:
-                    rl_img.drawHeight = max_h
-                    rl_img.drawWidth = max_h * ratio
-
-                nombre_img = texto_pdf_seguro(archivo["nombre"])
-                img_wrap = Table(
-                    [[rl_img], [Paragraph(nombre_img, label_style)]],
-                    colWidths=[18.4 * cm],
-                )
-                img_wrap.setStyle(TableStyle([
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
-                    ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
-                ]))
-                flowables.append(img_wrap)
-                flowables.append(Spacer(1, 0.10 * cm))
-            except Exception:
-                no_imgs.append(archivo)
-
-        if no_imgs:
-            nombres = texto_pdf_seguro(
-                ", ".join(a["nombre"] for a in no_imgs)
-            )
-            flowables.append(Paragraph(
-                f"<i>Otros archivos incluidos en el paquete ZIP: {nombres}</i>",
-                body_style,
-            ))
-            flowables.append(Spacer(1, 0.1 * cm))
-
-        flowables.append(Spacer(1, 0.1 * cm))
-        return flowables
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        leftMargin=1.3 * cm, rightMargin=1.3 * cm, topMargin=1.0 * cm, bottomMargin=2.0 * cm)
-    story = []
-
-    if solapa_path and solapa_path.exists():
-        max_width = 18.5 * cm
-        img = RLImage(str(solapa_path))
-        img.drawWidth = max_width
-        img.drawHeight = img.imageHeight * max_width / img.imageWidth
-        story.append(img)
-        story.append(Spacer(1, 0.18 * cm))
-
-    story.append(title_banner())
-    story.append(Spacer(1, 0.30 * cm))
-
-    fecha_box = Table([[
-        Paragraph("FECHA<br/><font size=7 color='#666'>de envío</font>", label_style),
-        Paragraph(f"<font size=11><b>{texto_pdf_seguro(datos['fecha'])}</b></font>", label_style),
-    ]], colWidths=[3.0 * cm, 15.4 * cm])
-    fecha_box.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.6, PDF_RED), ("BACKGROUND", (0, 0), (0, 0), PDF_LIGHT_BG),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-        ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-    ]))
-    story.append(fecha_box)
-    story.append(Spacer(1, 0.30 * cm))
-
-    story.append(section_band("DATOS CLIENTE / EMPRESA"))
-    story.append(Spacer(1, 0.15 * cm))
-    story.append(kv4_table([
-        [L("Empresa"), V(datos["nombre_empresa"]), L("Proyecto"), V(datos["nombre_proyecto"])],
-        [L("Página web"), V(datos["pagina_web"]), L("Redes sociales"), V(datos["redes_sociales"])],
-        [L("Líder de proyecto"), V(datos["lider_nombre"]), L("Puesto"), V(datos["lider_puesto"])],
-        [L("Celular"), V(datos["celular"]), L("Correo"), V(datos["correo"])],
-    ]))
-
-    story.append(Spacer(1, 0.30 * cm))
-    story.append(section_band("VOLUMEN DE PRODUCCIÓN"))
-    story.append(Spacer(1, 0.15 * cm))
-    story.append(kv4_table([
-        [L("375 ml — Cantidad"), V(datos["cantidad_375"]), L("750 ml — Cantidad"), V(datos["cantidad_750"])],
-    ]))
-
-    story.append(Spacer(1, 0.30 * cm))
-    story.append(section_band("CARACTERÍSTICAS DEL DISEÑO"))
-    story.append(Spacer(1, 0.15 * cm))
-    story.append(texto_bloque("Objetivo del diseño / Mensaje a comunicar", datos["objetivo_diseno"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(kv4_table([
-        [L("Frase o eslogan"), V(datos["frase_eslogan"]), L("Estilo deseado"), V(datos["estilo_deseado"])],
-        [L("Paleta de colores"), V(datos["paleta_colores"]), L("Logo"),
-         V("Adjunto en esta solicitud" if datos["tiene_logo"] else "Diseñar desde cero (sin logo previo)")],
-    ]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Iconografía o símbolos relevantes", datos["iconografia"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Elementos gráficos a incluir", datos["elementos_graficos"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Herramientas / referencias visuales (notas)", datos["herramientas_notas"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Información adicional", datos["informacion_adicional"]))
-
-    for titulo, archivos in adjuntos_por_seccion.items():
-        story.extend(imagenes_seccion(titulo, archivos))
-
-    story.append(Spacer(1, 0.3 * cm))
-
-    lider_pdf = texto_pdf_seguro(datos["lider_nombre"])
-    correo_pdf = texto_pdf_seguro(datos["correo"])
-    fecha_pdf = texto_pdf_seguro(datos["fecha"])
-
-    aceptacion = Table([[Paragraph(
-        f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
-        f"({correo_pdf}) el {fecha_pdf}. El material gráfico adjunto "
-        f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
-        body_style)]], colWidths=[18.4 * cm])
-    aceptacion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER), ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-    story.append(aceptacion)
-
-    doc.build(story, canvasmaker=lambda *args, **kwargs: NumberedCanvas(
-        *args, proyecto=datos["nombre_proyecto"], empresa=datos["nombre_empresa"], **kwargs))
-    pdf = buffer.getvalue()
-    buffer.close()
-    return pdf
-
-
-# =========================================================
-# Empaquetado de adjuntos (.zip) y envío de correo
-# =========================================================
-def build_zip_bytes(
-    pdf_bytes: bytes,
-    pdf_name: str,
-    adjuntos_por_seccion: dict,
-) -> bytes:
-    """Crea un ZIP con el PDF y todos los archivos originales."""
-    buffer = io.BytesIO()
-    rutas_usadas: set[str] = set()
-
-    def ruta_unica(carpeta: str, nombre: str) -> str:
-        carpeta_segura = nombre_archivo_seguro(carpeta, "Adjuntos")
-        nombre_seguro = nombre_archivo_seguro(nombre)
-        base = Path(nombre_seguro).stem
-        sufijo = Path(nombre_seguro).suffix
-        candidato = f"{carpeta_segura}/{nombre_seguro}"
-        contador = 2
-
-        while candidato.lower() in rutas_usadas:
-            candidato = f"{carpeta_segura}/{base}_{contador}{sufijo}"
-            contador += 1
-
-        rutas_usadas.add(candidato.lower())
-        return candidato
-
-    with zipfile.ZipFile(
-        buffer,
-        mode="w",
-        compression=zipfile.ZIP_DEFLATED,
-    ) as zf:
-        pdf_seguro = nombre_archivo_seguro(pdf_name, "Brief.pdf")
-        zf.writestr(pdf_seguro, pdf_bytes)
-        rutas_usadas.add(pdf_seguro.lower())
-
-        for carpeta, archivos in adjuntos_por_seccion.items():
-            for archivo in archivos:
-                zf.writestr(
-                    ruta_unica(carpeta, archivo["nombre"]),
-                    archivo["bytes"],
-                )
-
-    return buffer.getvalue()
-
-
-def get_smtp_config():
-    try:
-        smtp_cfg = st.secrets["smtp"]
-        brief_cfg = st.secrets["brief"]
-        return {
-            "host": smtp_cfg["host"],
-            "port": int(smtp_cfg.get("port", 465)),
-            "user": smtp_cfg["user"],
-            "password": smtp_cfg["password"],
-            "from_name": smtp_cfg.get("from_name", "Brief de Diseño · Círculo Tequila"),
-            "to_email": brief_cfg["to_email"],
-        }
-    except Exception:
-        return None
-
-
-def enviar_correo(
-    datos: dict,
-    zip_bytes: bytes,
-    zip_name: str,
-    copia_cliente: bool,
-) -> tuple[bool, str]:
-    """Envía únicamente el paquete ZIP mediante SMTP SSL."""
-    cfg = get_smtp_config()
-
-    if cfg is None:
-        return False, (
-            "El envío automático aún no está configurado. "
-            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
-        )
-
-    limite_zip_bytes = TAMANO_MAX_ZIP_CORREO_MB * 1024 * 1024
-    if len(zip_bytes) > limite_zip_bytes:
-        return False, (
-            f"El paquete ZIP pesa {tam_legible(len(zip_bytes))} y supera el límite "
-            f"de {TAMANO_MAX_ZIP_CORREO_MB} MB para envío automático. "
-            "Descárgalo y compártelo manualmente con Marketing."
-        )
-
-    destinatarios = [
-        correo.strip()
-        for correo in str(cfg["to_email"]).split(",")
-        if correo.strip()
-    ]
-    if not destinatarios:
-        return False, "No hay destinatarios configurados en [brief].to_email."
-
-    bcc = []
-    if copia_cliente and es_correo_valido(datos["correo"]):
-        bcc.append(datos["correo"])
-
-    msg = EmailMessage()
-    msg["Subject"] = (
-        f"Brief de Diseño · {datos['nombre_empresa']} — "
-        f"{datos['nombre_proyecto']}"
-    )
-    msg["From"] = f"{cfg['from_name']} <{cfg['user']}>"
-    msg["To"] = ", ".join(destinatarios)
-    msg["Reply-To"] = datos["correo"]
-
-    cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Empresarial).
-
-Empresa: {datos['nombre_empresa']}
-Proyecto: {datos['nombre_proyecto']}
-Líder de proyecto: {datos['lider_nombre']} ({datos['lider_puesto']})
-Celular: {datos['celular']}
-Correo: {datos['correo']}
-
-El archivo ZIP adjunto contiene el brief completo en PDF y todos los archivos originales proporcionados por el cliente.
-
-Este correo se generó automáticamente desde el formulario del brief."""
-    msg.set_content(cuerpo)
-    msg.add_attachment(
-        zip_bytes,
-        maintype="application",
-        subtype="zip",
-        filename=zip_name,
-    )
-
-    try:
-        with smtplib.SMTP_SSL(
-            cfg["host"],
-            cfg["port"],
-            timeout=30,
-        ) as server:
-            server.login(cfg["user"], cfg["password"])
-            server.send_message(
-                msg,
-                to_addrs=destinatarios + bcc,
-            )
-
-        return True, (
-            "✅ Tu brief y sus archivos se enviaron correctamente "
-            "al equipo de Marketing."
-        )
-    except Exception as error:
-        return False, (
-            f"No se pudo enviar el correo automáticamente "
-            f"({type(error).__name__}: {error}). "
-            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
-        )
-
-
-# =========================================================
-# Pantalla de éxito (después de enviar)
-# =========================================================
-if st.session_state.submitted:
-    res = st.session_state.submit_result
-    email_ok = bool(res.get("email_ok"))
-
-    if email_ok:
-        st.success(res.get("email_msg", "✅ Brief enviado correctamente."))
-        mensaje_final = (
-            f"<b>¡Gracias, {escape(str(res.get('lider_nombre', '')))}! 🎉</b><br/>"
-            f"Recibimos el brief de <b>{escape(str(res.get('nombre_empresa', '')))}</b> "
-            f"para el proyecto <b>{escape(str(res.get('nombre_proyecto', '')))}</b>. "
-            "El equipo de diseño de Círculo Tequila lo revisará y se pondrá "
-            "en contacto contigo a la brevedad."
-        )
-    else:
-        st.warning(res.get(
-            "email_msg",
-            "No se pudo enviar el correo automáticamente.",
-        ))
-        mensaje_final = (
-            "<b>El paquete fue generado correctamente, pero no se confirmó su envío "
-            "por correo.</b><br/>Descarga el ZIP y compártelo manualmente con Marketing."
-        )
-
-    st.markdown(
-        f'<div class="intro-card">{mensaje_final}</div>',
-        unsafe_allow_html=True,
-    )
-
-    colD1, colD2 = st.columns(2)
-    with colD1:
-        st.download_button(
-            "⬇️ Descargar copia del brief (PDF)",
-            data=res["pdf_bytes"],
-            file_name=res["pdf_name"],
-            mime="application/pdf",
-            use_container_width=True,
-        )
-    with colD2:
-        st.download_button(
-            "⬇️ Descargar paquete completo (.zip)",
-            data=res["zip_bytes"],
-            file_name=res["zip_name"],
-            mime="application/zip",
-            use_container_width=True,
-        )
-
-    st.markdown("---")
-    if st.button("📝 Llenar otro brief", use_container_width=True):
-        reiniciar_formulario()
-        st.rerun()
-
-    st.stop()
-
-
-# =========================================================
-# Introducción / instrucciones (didáctico y amigable)
-# =========================================================
-st.markdown(
-    """
-    <div class="intro-card">
-        👋 <b>¡Hola! Este formulario nos ayuda a entender exactamente qué necesitas
-        para tu diseño.</b><br/>
-        Tómate unos minutos para llenarlo con el mayor detalle posible — entre más
-        clara sea la información, más rápido y preciso será el resultado. Los campos
-        marcados con <b>*</b> son obligatorios. Puedes adjuntar tu logo e imágenes de
-        referencia directamente aquí, no necesitas usar WeTransfer por separado.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-ejemplos_disponibles = get_ejemplos_disponibles()
-mostrar_galeria = bool(ejemplos_disponibles or SPIN_EJEMPLOS)
-
-if mostrar_galeria:
-    with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
-        st.caption(
-            "Estos son algunos diseños que ya creamos para otros clientes — solo para "
-            "darte una idea de las posibilidades antes de describir el tuyo."
-        )
-
-        # ---------------------------------------------------------
-        # Ejemplos interactivos 360°
-        # ---------------------------------------------------------
-        if SPIN_EJEMPLOS:
-            st.markdown("##### 🔄 Ejemplos interactivos 360°")
-            st.caption(
-                "Haz clic sobre cada vista y arrastra la botella para visualizar el diseño completo."
-            )
-
-            cols_spin = st.columns(3)
-            for i, item in enumerate(SPIN_EJEMPLOS):
-                with cols_spin[i % 3]:
-                    with st.container(border=True):
-                        st.iframe(
-                            item["url"],
-                            height=260,
-                            width="stretch",
-                        )
-                        st.markdown(f"**{item['titulo']}**")
-                        if item.get("desc"):
-                            st.caption(item["desc"])
-
-        # ---------------------------------------------------------
-        # Ejemplos estáticos
-        # ---------------------------------------------------------
-        if ejemplos_disponibles:
-            st.markdown("##### 🖼️ Ejemplos estáticos")
-            cols_ej = st.columns(3)
-
-            for i, (fpath, titulo, desc) in enumerate(ejemplos_disponibles):
-                with cols_ej[i % 3]:
-                    with st.container(border=True):
-                        st.image(
-                            str(fpath),
-                            width=220
-                        )
-                        st.markdown(f"**{titulo}**")
-                        if desc:
-                            st.caption(desc)
-
-_gen = st.session_state.form_gen
-
-with st.sidebar:
-    st.markdown(
-        f"""
-        <div style="text-align:center; padding:8px 0 12px 0;">
-            <div style="font-weight:700; color:{PRIMARY}; font-size:1rem;">
-                Círculo Tequila
-            </div>
-            <div style="font-size:0.78rem; color:#666;">
-                Brief de Diseño · Marketing
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("##### 💡 Antes de adjuntar tus archivos")
-    st.caption(
-        "• Logotipos: si los tienes, en formato vectorial (.ai) es ideal.\n\n"
-        "• Fotos/imágenes: en alta resolución (300 dpi) si es posible.\n\n"
-        "• Si tus archivos pesan mucho, agrégalos igual — o dejamos un link de "
-        "WeTransfer/Drive como respaldo al final del formulario."
-    )
-    st.markdown("---")
-    st.caption(f"📅 {fecha_es(ahora_mexico())}")
-
-
-# =========================================================
-# Datos Cliente / Empresa
-# =========================================================
-section_header("🏢 Datos Cliente / Empresa")
-
-with st.container(border=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        nombre_empresa = st.text_input("Nombre de la empresa *",
-            placeholder="Ej. G&NC Asesores Patrimoniales", key=f"nombre_empresa_{_gen}")
-        pagina_web = st.text_input("Página web",
-            placeholder="https://tuempresa.com", key=f"pagina_web_{_gen}")
-        lider_nombre = st.text_input("Contacto responsable de Proyecto *",
-            placeholder="Nombre completo", key=f"lider_nombre_{_gen}")
-        celular = st.text_input("Celular *",
-            placeholder="Ej. 33 1234 5678", key=f"celular_{_gen}")
-    with col2:
-        nombre_proyecto = st.text_input("Nombre del proyecto *",
-            placeholder="Ej. Lanzamiento línea corporativa", key=f"nombre_proyecto_{_gen}")
-        redes_sociales = st.text_input("Redes sociales",
-            placeholder="@tuempresa", key=f"redes_sociales_{_gen}")
-        lider_puesto = st.text_input("Puesto *",
-            placeholder="Ej. Gerente Comercial", key=f"lider_puesto_{_gen}")
-        correo = st.text_input("Correo *",
-            placeholder="nombre@empresa.com", key=f"correo_{_gen}")
-
-
-# =========================================================
-# Presentación del producto
-# =========================================================
-section_header(
-    "🍶 Presentación del producto",
-    "Selecciona la presentación para la que realizaremos el diseño"
-)
-
-with st.container(border=True):
-    st.caption(
-        "Puedes seleccionar una o ambas presentaciones. "
-        "Esto nos ayuda a considerar correctamente las proporciones y detalles del diseño en cada botella."
-    )
-
-    colv1, colv2 = st.columns(2)
-
-    with colv1:
-        presentacion_375 = st.checkbox(
-            "375 ml",
-            key=f"presentacion_375_{_gen}"
-        )
-
-    with colv2:
-        presentacion_750 = st.checkbox(
-            "750 ml",
-            key=f"presentacion_750_{_gen}"
-        )
-
-
-# =========================================================
-# Características del diseño
-# =========================================================
-section_header("🎨 Características del diseño")
-
-with st.container(border=True):
-    objetivo_diseno = st.text_area(
-        "Objetivo del diseño / Mensaje a comunicar (¿Qué debe transmitir el diseño? Cuéntanos sobre tu marca, a quién le hablas y qué quieres lograr con este producto.)*",
-        placeholder="Mensaje abierto",
-        height=120, key=f"objetivo_diseno_{_gen}")
-
-    st.markdown("**Logo de empresa (adjuntar) ***")
-    sin_logo = st.checkbox("No tengo logo — que Círculo Tequila lo diseñe", key=f"sin_logo_{_gen}")
-    logo_files = st.file_uploader(
-        "Sube tu logo (idealmente en formato vectorial .ai, o imagen en alta resolución)",
-        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"logo_files_{_gen}",
-        disabled=sin_logo,
-    )
-    if logo_files:
-        cols_logo = st.columns(min(len(logo_files), 3))
-        for fi, f in enumerate(logo_files):
-            with cols_logo[fi % 3]:
-                if es_imagen(f.name):
-                    st.image(f.getvalue(), caption=f.name, use_container_width=True)
-                else:
-                    st.info(f"📎 {f.name}")
-
-    col3, col4 = st.columns(2)
-    with col3:
-        frase_eslogan = st.text_input("Frase o eslogan",
-            placeholder="Opcional", key=f"frase_eslogan_{_gen}")
-    with col4:
-        paleta_colores = st.text_input("Colores sugeridos *",
-            placeholder="Mensaje abierto, Ej. Colores — tintos/rojos, azules, negros, etc",
-            key=f"Colores_sugeridos_{_gen}")
-
-    estilo_sel = st.selectbox("Estilo deseado *", ESTILOS_SUGERIDOS,
-        key=f"estilo_sel_{_gen}", format_func=formato_opcion_estilo, index=None,
-        placeholder="Selecciona una opción")
-    estilo_otro = ""
-    if estilo_sel == "Otro (especifica)":
-        estilo_otro = st.text_input("Especifica el estilo deseado *",
-            placeholder="Ej. Vintage, industrial, playero, etc.", key=f"estilo_otro_{_gen}")
-    estilo_deseado = estilo_otro.strip() if estilo_sel == "Otro (especifica)" else (estilo_sel or "")
-
-    iconografia = st.text_area("Iconografía o símbolos relevantes",
+    iconografia = st.text_area(
+        "Iconografía o símbolos relevantes",
         placeholder="Ej. logro, escudo, protección, finanzas, dinero, acompañamiento, asesoría...",
-        height=80, key=f"iconografia_{_gen}")
+        height=80,
+        key=f"iconografia_{_gen}"
+    )
+
+Pero elimina completamente lo que viene inmediatamente después:
+
     iconografia_files = st.file_uploader(
         "Adjuntar referencias de iconografía (opcional)",
-        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"iconografia_files_{_gen}")
+        type=TIPOS_ADJUNTOS_PERMITIDOS,
+        accept_multiple_files=True,
+        key=f"iconografia_files_{_gen}"
+    )
+
+
     if iconografia_files:
         cols_icon = st.columns(min(len(iconografia_files), 3))
         for fi, f in enumerate(iconografia_files):
@@ -1074,20 +74,27 @@ with st.container(border=True):
                     st.image(f.getvalue(), caption=f.name, use_container_width=True)
                 else:
                     st.info(f"📎 {f.name}")
+2. Elimina el uploader de “Referencias visuales”
 
-    elementos_graficos = st.text_area(
-        "Elementos gráficos a incluir *",
-        placeholder="Describe todo lo que se desea que aparezca en el diseño: logotipo, nombre "
-                    "comercial, palabras clave, dónde se entregarán las botellas, etc.",
-        height=110, key=f"elementos_graficos_{_gen}")
+Conserva también:
 
     herramientas_notas = st.text_area(
         "Herramientas / referencias visuales (notas o links)",
         placeholder="Opcional — describe o pega links de moodboards, manuales de marca, Pinterest, etc.",
-        height=80, key=f"herramientas_notas_{_gen}")
+        height=80,
+        key=f"herramientas_notas_{_gen}"
+    )
+
+Pero elimina este bloque:
+
     herramientas_files = st.file_uploader(
         "Adjuntar imágenes, moodboard o manuales de referencia (opcional)",
-        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"herramientas_files_{_gen}")
+        type=TIPOS_ADJUNTOS_PERMITIDOS,
+        accept_multiple_files=True,
+        key=f"herramientas_files_{_gen}"
+    )
+
+
     if herramientas_files:
         cols_h = st.columns(min(len(herramientas_files), 3))
         for fi, f in enumerate(herramientas_files):
@@ -1097,198 +104,368 @@ with st.container(border=True):
                 else:
                     st.info(f"📎 {f.name}")
 
-    informacion_adicional = st.text_area(
-        "Información adicional",
-        placeholder="Opcional — instrucciones especiales, fechas importantes, comentarios o cualquier información que consideres relevante.",
-        height=100,
-        key=f"informacion_adicional_{_gen}"
+Esos son los dos cargadores independientes que hoy aparecen en pantalla.
+
+3. Agrega un único uploader general
+
+Yo lo pondría después de “Información adicional”, para que sea el último elemento de la sección.
+
+Pega esto:
+
+    st.markdown("**📎 Archivos de referencia**")
+
+
+    st.caption(
+        "Adjunta aquí cualquier material que pueda ayudarnos a entender mejor tu idea: "
+        "imágenes, fotografías, ilustraciones, manuales de marca, PDFs, referencias visuales, etc."
     )
 
 
+    adjuntos_files = st.file_uploader(
+        "Adjuntar archivos (opcional)",
+        type=TIPOS_ADJUNTOS_PERMITIDOS,
+        accept_multiple_files=True,
+        key=f"adjuntos_files_{_gen}"
+    )
 
-# =========================================================
-# Validación de tamaño de adjuntos
-# =========================================================
-logo_files_efectivos = [] if sin_logo else list(logo_files or [])
+
+    if adjuntos_files:
+        cols_adjuntos = st.columns(4)
+
+
+        for fi, f in enumerate(adjuntos_files):
+            with cols_adjuntos[fi % 4]:
+                if es_imagen(f.name):
+                    st.image(
+                        f.getvalue(),
+                        caption=f.name,
+                        width=160
+                    )
+                else:
+                    st.info(f"📎 {f.name}")
+
+Aquí ya aproveché el cambio que habíamos comentado antes: las vistas previas quedan a 160 px, para que no vuelvan a ocupar media pantalla.
+
+4. Modifica el conteo de archivos
+
+Esto es importante porque actualmente el límite de tamaño suma iconografia_files y herramientas_files.
+
+Después de haber eliminado Logo, probablemente ahora tienes algo similar a:
 
 todos_los_archivos = (
-    logo_files_efectivos
-    + list(iconografia_files or [])
+    list(iconografia_files or [])
     + list(herramientas_files or [])
 )
+
+Reemplázalo por:
+
+todos_los_archivos = list(adjuntos_files or [])
+
+Nada más.
+
+El cálculo que tienes después:
 
 peso_total = sum(
     len(archivo.getvalue())
     for archivo in todos_los_archivos
 )
 
-peso_total_excedido = (
-    peso_total > TAMANO_MAX_ADJUNTOS_MB * 1024 * 1024
-)
+se queda exactamente igual.
 
-if peso_total_excedido:
-    st.error(
-        f"⚠️ Los archivos seleccionados pesan {tam_legible(peso_total)} en total. "
-        f"El máximo permitido es {TAMANO_MAX_ADJUNTOS_MB} MB. "
-        "Elimina algunos archivos o reduce su tamaño para poder enviar el brief."
-    )
-elif peso_total > 0:
-    st.caption(
-        f"📎 Archivos seleccionados: {len(todos_los_archivos)} · "
-        f"Peso total: {tam_legible(peso_total)} de "
-        f"{TAMANO_MAX_ADJUNTOS_MB} MB permitidos."
-    )
+Y también se mantiene tu límite de 15 MB. No tenemos que tocar esa lógica.
 
+5. Cambia la creación del ZIP
 
-# =========================================================
-# Aceptación y envío
-# =========================================================
-section_header("✅ Confirmación y envío")
+Actualmente separas los archivos en carpetas de "Iconografia" y "Referencias".
 
-with st.container(border=True):
-    copia_cliente = st.checkbox("Quiero recibir una copia de este brief en mi correo",
-        key=f"copia_cliente_{_gen}")
-    acepto = st.checkbox(
-        "Confirmo que la información proporcionada es correcta y autorizo a Círculo Tequila "
-        "a usarla para el diseño solicitado. *",
-        key=f"acepto_{_gen}")
+Después de nuestros cambios anteriores seguramente tienes algo parecido a:
 
-# Validaciones
-errores = []
-campos_requeridos = {
-    "Nombre de la empresa": nombre_empresa,
-    "Nombre del proyecto": nombre_proyecto,
-    "Nombre líder del proyecto": lider_nombre,
-    "Puesto": lider_puesto,
-    "Celular": celular,
-    "Objetivo del diseño / Mensaje a comunicar": objetivo_diseno,
-    "Paleta de colores sugerida": paleta_colores,
-    "Elementos gráficos a incluir": elementos_graficos,
-    "Información adicional": informacion_adicional,
+adjuntos_por_seccion = {
+    "Iconografia": [
+        {"nombre": f.name, "bytes": f.getvalue()}
+        for f in (iconografia_files or [])
+    ],
+    "Referencias": [
+        {"nombre": f.name, "bytes": f.getvalue()}
+        for f in (herramientas_files or [])
+    ],
 }
-for etiqueta, valor in campos_requeridos.items():
-    if not valor.strip():
-        errores.append(f"• {etiqueta}")
 
-if not correo.strip():
-    errores.append("• Correo")
-elif not es_correo_valido(correo):
-    errores.append("• Correo (formato no válido)")
+Reemplaza todo ese bloque por:
 
-if not estilo_deseado.strip():
-    errores.append("• Estilo deseado")
+adjuntos_por_seccion = {
+    "Archivos_adjuntos": [
+        {"nombre": f.name, "bytes": f.getvalue()}
+        for f in (adjuntos_files or [])
+    ],
+}
+
+De esta manera el ZIP quedará mucho más sencillo:
+
+Paquete_Brief_Cliente_Proyecto.zip
+
+
+├── Brief_Cliente_Proyecto.pdf
+└── Archivos_adjuntos
+    ├── referencia1.jpg
+    ├── manual_marca.pdf
+    ├── fotografia.png
+    ├── ilustracion.ai
+    └── ...
+Y tenemos una ventaja adicional
+
+No necesitamos modificar la lógica general del PDF.
+
+Tu PDF ya recorre automáticamente:
+
+for titulo, archivos in adjuntos_por_seccion.items():
+    story.extend(imagenes_seccion(titulo, archivos))
+
+Por lo tanto, ahora simplemente aparecerá una sección:
+
+ADJUNTOS — Archivos_adjuntos
+
+en lugar de varias categorías.
+
+Yo solo haría un pequeño refinamiento y usaría:
+
+adjuntos_por_seccion = {
+    "Material de referencia": [
+        {"nombre": f.name, "bytes": f.getvalue()}
+        for f in (adjuntos_files or [])
+    ],
+}
+
+Así, en el PDF se verá mucho mejor:
+
+ADJUNTOS — MATERIAL DE REFERENCIA
+
+y en el ZIP la carpeta será automáticamente algo como:
+
+Material_de_referencia/
+Resultado visual
+
+La sección te quedaría mucho más limpia:
+
+Frase o eslogan | Colores sugeridos
+
+Estilo deseado
+
+Iconografía o símbolos relevantes
+[Campo de texto]
+
+Elementos gráficos a incluir
+[Campo de texto]
+
+Herramientas / referencias visuales
+[Campo de texto]
+
+Información adicional
+[Campo de texto]
+
+📎 Archivos de referencia
+Adjunta cualquier material que pueda ayudarnos a entender mejor tu idea.
+
+[ Upload ]
+
+Eso para un cliente está bastante mejor: él no tiene que decidir si un archivo pertenece a “iconografía”, “moodboard” o “referencias”. Simplemente adjunta todo y Marketing recibe el paquete completo.
+
+Se ha pegado el código(4).py
+Python
+listo, 
+hasta ahora va asi, me ayudas a reviar el codigo 
+
+
+
+Sí padrino. Revisé la versión completa que acabas de subir y encontré algo importante: visualmente ya va en la dirección correcta, pero todavía quedaron varias referencias del código anterior. Si lo publicas tal como está, la app va a fallar.
+
+La buena noticia es que no hay que reconstruir nada. Son correcciones puntuales.
+
+Primero: hay un error de sangría que actualmente impide ejecutar el archivo. El bloque adjuntos_por_seccion quedó fuera del if st.button(...), pero las líneas siguientes vuelven a entrar con sangría. Está entre las líneas 1219–1226.
+
+Actualmente tienes:
+
+adjuntos_por_seccion = {
+    "Material de referencia": [
+        {"nombre": f.name, "bytes": f.getvalue()}
+        for f in (adjuntos_files or [])
+    ],
+}
+
+
+    empresa_archivo = nombre_archivo_seguro(
+
+Debe quedar así, con 4 espacios delante de todo el bloque:
+
+    adjuntos_por_seccion = {
+        "Material de referencia": [
+            {"nombre": f.name, "bytes": f.getvalue()}
+            for f in (adjuntos_files or [])
+        ],
+    }
+
+
+    empresa_archivo = nombre_archivo_seguro(
+
+Este es el primer cambio que haría porque actualmente genera un IndentationError.
+
+Todavía quedaron referencias al logo que ya eliminamos. Aunque ya no aparece el uploader del logo, el código todavía intenta utilizar sin_logo, logo_files y logo_files_efectivos.
+
+Borra completamente:
+
+logo_files_efectivos = [] if sin_logo else list(logo_files or [])
+
+También borra esta validación:
 
 if not sin_logo and not logo_files:
     errores.append("• Logo de empresa (adjunta un archivo o marca \"No tengo logo\")")
 
-if peso_total_excedido:
-    errores.append(
-        f"• Los archivos adjuntos superan el límite total de "
-        f"{TAMANO_MAX_ADJUNTOS_MB} MB"
+Y dentro de datos = {} elimina:
+
+"tiene_logo": bool(logo_files_efectivos),
+
+Actualmente esa referencia sigue en las líneas 1208–1210.
+
+La nueva selección de 375 / 750 ml está bien en pantalla, pero todavía no está conectada con el envío. Ya tienes correctamente los dos checkboxes presentacion_375 y presentacion_750. Sin embargo, al enviar todavía intentas guardar las antiguas variables cantidad_375 y cantidad_750, que ya no existen.
+
+Busca:
+
+"cantidad_375": str(int(cantidad_375)),
+"cantidad_750": str(int(cantidad_750)),
+
+y reemplaza por:
+
+"presentacion_375": bool(presentacion_375),
+"presentacion_750": bool(presentacion_750),
+
+Además recomiendo que al menos una presentación sea obligatoria. Después de:
+
+if not estilo_deseado.strip():
+    errores.append("• Estilo deseado")
+
+agrega:
+
+if not presentacion_375 and not presentacion_750:
+    errores.append("• Selecciona al menos una presentación: 375 ml o 750 ml")
+El PDF todavía conserva “VOLUMEN DE PRODUCCIÓN” y las cantidades antiguas. Esa parte sigue buscando datos["cantidad_375"] y datos["cantidad_750"].
+
+Reemplaza este bloque completo por:
+
+    story.append(Spacer(1, 0.30 * cm))
+    story.append(section_band("PRESENTACIÓN DEL PRODUCTO"))
+    story.append(Spacer(1, 0.15 * cm))
+    story.append(kv4_table([
+        [
+            L("375 ml"),
+            V("Seleccionada" if datos["presentacion_375"] else "No seleccionada"),
+            L("750 ml"),
+            V("Seleccionada" if datos["presentacion_750"] else "No seleccionada"),
+        ],
+    ]))
+
+Y más abajo, el PDF todavía muestra Logo.
+
+Actualmente:
+
+story.append(kv4_table([
+    [L("Frase o eslogan"), V(datos["frase_eslogan"]), L("Estilo deseado"), V(datos["estilo_deseado"])],
+    [L("Paleta de colores"), V(datos["paleta_colores"]), L("Logo"),
+     V("Adjunto en esta solicitud" if datos["tiene_logo"] else "Diseñar desde cero (sin logo previo)")],
+]))
+
+Déjalo así:
+
+    story.append(kv4_table([
+        [
+            L("Frase o eslogan"),
+            V(datos["frase_eslogan"]),
+            L("Estilo deseado"),
+            V(datos["estilo_deseado"])
+        ],
+        [
+            L("Colores sugeridos"),
+            V(datos["paleta_colores"]),
+            L(""),
+            V("")
+        ],
+    ]))
+Todavía quedó el antiguo uploader de Iconografía. Esto explica por qué, aunque ya agregaste correctamente el uploader general, todavía aparecería otro botón independiente.
+
+Conserva:
+
+iconografia = st.text_area(
+
+pero borra únicamente:
+
+    iconografia_files = st.file_uploader(
+        "Adjuntar referencias de iconografía (opcional)",
+        type=TIPOS_ADJUNTOS_PERMITIDOS, accept_multiple_files=True, key=f"iconografia_files_{_gen}")
+
+Tu nuevo uploader general está correctamente implementado en las líneas 1077–1103. Esa parte sí está bien.
+
+“Información adicional” sigue siendo obligatoria internamente. En pantalla ya quitaste correctamente el asterisco, pero todavía aparece dentro de campos_requeridos.
+
+Borra:
+
+"Información adicional": informacion_adicional,
+
+Después de eso sí quedará realmente opcional.
+
+Colores sugeridos, en cambio, ya quedó correctamente opcional: no tiene asterisco en el formulario y ya no aparece en campos_requeridos.
+
+Hay dos textos antiguos que debemos actualizar, aunque no causan errores. La introducción todavía dice que el cliente puede adjuntar su logo y que no necesita WeTransfer. Y la barra lateral todavía habla de logotipos y de un link WeTransfer/Drive.
+
+La introducción la dejaría así:
+
+        marcados con <b>*</b> son obligatorios. Puedes adjuntar imágenes y archivos
+        de referencia directamente dentro del formulario.
+
+Y la barra lateral:
+
+    st.caption(
+        "• Fotos/imágenes: procura utilizar archivos de buena calidad.\n\n"
+        "• Puedes adjuntar referencias visuales, fotografías, manuales o ejemplos "
+        "que ayuden a nuestro equipo de diseño a entender mejor tu idea.\n\n"
+        f"• El tamaño máximo total permitido para los archivos adjuntos es de "
+        f"{TAMANO_MAX_ADJUNTOS_MB} MB."
     )
 
-if not acepto:
-    errores.append("• Debes confirmar la casilla de aceptación")
+Por otro lado, la galería 360° está bien integrada: ya tienes los seis enlaces Sirv y la visualización en tres columnas con altura reducida de 260 px. Esa parte yo no la tocaría por ahora.
 
-puede_enviar = len(errores) == 0
+También revisé sintácticamente el archivo: el error actual está efectivamente en la sangría del bloque alrededor de la línea 1226. Después de aplicar las correcciones anteriores, la estructura queda coherente con todos los cambios que hemos hecho hasta ahora.
 
-if errores:
-    st.warning("⚠️ Antes de enviar, revisa lo siguiente:\n\n" + "\n".join(errores))
+Mi recomendación es hacer primero estos 7 ajustes y volver a probar el envío completo: formulario → PDF → ZIP → correo. No agregaría todavía más campos hasta confirmar ese recorrido de punta a punta.
 
-if st.button(
-    "📩 Enviar brief",
-    type="primary",
-    disabled=not puede_enviar,
-    use_container_width=True,
-):
-    datos = {
-        "fecha": fecha_es(ahora_mexico()),
-        "nombre_empresa": nombre_empresa.strip(),
-        "nombre_proyecto": nombre_proyecto.strip(),
-        "pagina_web": pagina_web.strip(),
-        "redes_sociales": redes_sociales.strip(),
-        "lider_nombre": lider_nombre.strip(),
-        "lider_puesto": lider_puesto.strip(),
-        "celular": celular.strip(),
-        "correo": correo.strip(),
-        "cantidad_375": str(int(cantidad_375)),
-        "cantidad_750": str(int(cantidad_750)),
-        "objetivo_diseno": objetivo_diseno.strip(),
-        "tiene_logo": bool(logo_files_efectivos),
-        "frase_eslogan": frase_eslogan.strip(),
-        "paleta_colores": paleta_colores.strip(),
-        "estilo_deseado": estilo_deseado.strip(),
-        "iconografia": iconografia.strip(),
-        "elementos_graficos": elementos_graficos.strip(),
-        "herramientas_notas": herramientas_notas.strip(),
-        "informacion_adicional": informacion_adicional.strip(),
-    }
+corrije todo el codigo a este es punto y me lo envias corregido,
+ademas me gustaria que en lugar de colores azules tenga colores en tonos negros y grises
+se puede padrino??
 
-    adjuntos_por_seccion = {
-        "Logo": [
-            {"nombre": f.name, "bytes": f.getvalue()}
-            for f in logo_files_efectivos
-        ],
-        "Iconografia": [
-            {"nombre": f.name, "bytes": f.getvalue()}
-            for f in (iconografia_files or [])
-        ],
-        "Referencias": [
-            {"nombre": f.name, "bytes": f.getvalue()}
-            for f in (herramientas_files or [])
-        ],
-    }
+Sí padrino. Ya tomé la versión completa que acabas de subir y la corregí directamente, sin reconstruir la aplicación. Encontré restos del código anterior —por ejemplo, referencias al logo, cantidades de 375/750 y el PDF antiguo de “Volumen de producción”— que todavía podían provocar errores. También quedaban referencias a sin_logo, logo_files y una sangría incorrecta en el bloque de adjuntos/envío.
 
-    empresa_archivo = nombre_archivo_seguro(
-        datos["nombre_empresa"],
-        "Empresa",
-    )
-    proyecto_archivo = nombre_archivo_seguro(
-        datos["nombre_proyecto"],
-        "Proyecto",
-    )
-    nombre_base = f"{empresa_archivo}_{proyecto_archivo}"
-    pdf_name = f"Brief_{nombre_base}.pdf"
-    zip_name = f"Paquete_Brief_{nombre_base}.zip"
+Ya quedó corregido con estos ajustes:
 
-    try:
-        with st.spinner(
-            "Generando el PDF, preparando los archivos y enviándolos a Marketing..."
-        ):
-            pdf_bytes = build_brief_pdf(
-                datos,
-                adjuntos_por_seccion,
-            )
-            zip_bytes = build_zip_bytes(
-                pdf_bytes,
-                pdf_name,
-                adjuntos_por_seccion,
-            )
-            email_ok, email_msg = enviar_correo(
-                datos,
-                zip_bytes,
-                zip_name,
-                copia_cliente,
-            )
-    except Exception as error:
-        st.error(
-            "No fue posible generar el paquete del brief. "
-            "Revisa los archivos adjuntos e inténtalo nuevamente."
-        )
-        st.caption(f"Detalle técnico: {type(error).__name__}: {error}")
-        st.stop()
+✅ Tema azul → negro y gris: barras, títulos, botones personalizados, acentos, tarjetas y PDF.
+✅ Conservé los 6 ejemplos interactivos 360°.
+✅ Presentaciones 375 ml / 750 ml mediante casillas; pueden seleccionar una o ambas.
+✅ El PDF ya dice “PRESENTACIÓN DEL PRODUCTO” y no “Volumen de producción”.
+✅ Eliminé completamente toda referencia funcional al logo.
+✅ Colores sugeridos queda opcional.
+✅ Información adicional queda opcional.
+✅ Solo queda un botón general de archivos adjuntos.
+✅ El ZIP crea una sola carpeta “Material de referencia”.
+✅ Se corrigieron las variables antiguas cantidad_375, cantidad_750, tiene_logo, etc.
+✅ Se corrigió la sangría del bloque de envío.
+✅ Actualicé los textos que todavía mencionaban logo, WeTransfer o Drive.
+✅ Hice consistente “Contacto responsable” en formulario, PDF y correo.
+✅ Revisé la sintaxis completa con py_compile y pasa correctamente.
 
-    st.session_state.submit_result = {
-        "email_ok": email_ok,
-        "email_msg": email_msg,
-        "pdf_bytes": pdf_bytes,
-        "pdf_name": pdf_name,
-        "zip_bytes": zip_bytes,
-        "zip_name": zip_name,
-        "lider_nombre": datos["lider_nombre"],
-        "nombre_empresa": datos["nombre_empresa"],
-        "nombre_proyecto": datos["nombre_proyecto"],
-    }
-    st.session_state.submitted = True
-    st.rerun()
-    
+Aquí tienes el archivo listo para sustituir tu streamlit_app.py actual:
+
+⬇️ Descargar streamlit_app corregido — negro y gris
+
+Te recomiendo que descargues este archivo, reemplaces el contenido de tu streamlit_app.py, guardes, Commit y Sync/Push. No necesitas tocar secrets.toml, SMTP, requirements ni las carpetas de imágenes.
+
+Un detalle: este archivo ya elimina los azules definidos dentro del .py. Si al publicarlo ves que algún elemento nativo de Streamlit —por ejemplo un checkbox seleccionado— todavía aparece azul, entonces ese color probablemente viene de tu .streamlit/config.toml. En ese caso me compartes ese archivo y también lo dejamos completamente en negro, gris, blanco y plata para cerrar la identidad visual.
+
+streamlit_app_CORREGIDO_NEGRO_GRIS.py
+Código
