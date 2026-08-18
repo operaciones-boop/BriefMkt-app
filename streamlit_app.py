@@ -861,7 +861,7 @@ with st.expander("🔄 Vista 360° · Edición Empresarial", expanded=True):
         height=560,
         width="stretch",
     )
-    
+
 ejemplos_disponibles = get_ejemplos_disponibles()
 if ejemplos_disponibles:
     with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
@@ -1042,12 +1042,12 @@ with st.container(border=True):
                 else:
                     st.info(f"📎 {f.name}")
 
-   informacion_adicional = st.text_area(
-    "Notas o Comentarios",
-    placeholder="Opcional — instrucciones especiales, fechas importantes, comentarios o cualquier información que consideres relevante.",
-    height=100,
-    key=f"Notas_o_Comentarios_{_gen}"
-)
+    informacion_adicional = st.text_area(
+        "Información adicional",
+        placeholder="Opcional — instrucciones especiales, fechas importantes, comentarios o cualquier información que consideres relevante.",
+        height=100,
+        key=f"informacion_adicional_{_gen}"
+    )
 
 
 
