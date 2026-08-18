@@ -1,8 +1,3 @@
-ca
-/
-streamlit_app_EDICION_PERSONALIZADA.py
-
-
 import io
 import zipfile
 import smtplib
