@@ -165,6 +165,38 @@ EJEMPLOS_INFO = [
     ("ejemplo_5_diagrama_impresion.png", "¿Cómo se ve al final?",
      "La impresión cubre tanto la cara frontal como la trasera de la botella."),
 ]
+SPIN_EJEMPLOS = [
+    {
+        "titulo": "Luna Llena",
+        "url": "https://mariana01.sirv.com/Luna%20Llena/Luna%20Llena.spin?initializeOn=click",
+        "desc": "Edición artística · vista 360°",
+    },
+    {
+        "titulo": "Theralis",
+        "url": "https://mariana01.sirv.com/Theralist/Theralist.spin?initializeOn=click",
+        "desc": "Edición empresarial · vista 360°",
+    },
+    {
+        "titulo": "Alfran",
+        "url": "https://mariana01.sirv.com/Alfran/Alfran.spin?initializeOn=click",
+        "desc": "Edición empresarial · vista 360°",
+    },
+    {
+        "titulo": "Milwaukee",
+        "url": "https://mariana01.sirv.com/Milwaukee/Milwaukee.spin?initializeOn=click",
+        "desc": "Edición conmemorativa · vista 360°",
+    },
+    {
+        "titulo": "Construcción",
+        "url": "https://mariana01.sirv.com/Deconstrucci%C3%B3n/Deconstrucci%C3%B3n.spin?initializeOn=click",
+        "desc": "Edición institucional · vista 360°",
+    },
+    {
+        "titulo": "Boda M&R",
+        "url": "https://mariana01.sirv.com/M%26R/M%26R.spin?initializeOn=click",
+        "desc": "Edición personalizada · vista 360°",
+    },
+]
 
 
 def get_ejemplos_disponibles() -> list:
@@ -848,34 +880,57 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-# =========================================================
-# PRUEBA TEMPORAL — VISTA 360°
-# =========================================================
-with st.expander("🔄 Vista 360° · Edición Empresarial", expanded=True):
-    st.caption(
-        "Arrastra la botella hacia los lados para visualizar el diseño completo."
-    )
 
-    st.iframe(
-        "https://mariana01.sirv.com/Theralist/Theralist.spin",
-        height=560,
-        width="stretch",
-    )
 
 ejemplos_disponibles = get_ejemplos_disponibles()
-if ejemplos_disponibles:
+mostrar_galeria = bool(ejemplos_disponibles or SPIN_EJEMPLOS)
+
+if mostrar_galeria:
     with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
         st.caption(
             "Estos son algunos diseños que ya creamos para otros clientes — solo para "
             "darte una idea de las posibilidades antes de describir el tuyo."
         )
-        cols_ej = st.columns(3)
-        for i, (fpath, titulo, desc) in enumerate(ejemplos_disponibles):
-            with cols_ej[i % 3]:
-                st.image(str(fpath), use_container_width=True)
-                st.markdown(f"**{titulo}**")
-                if desc:
-                    st.caption(desc)
+
+        # ---------------------------------------------------------
+        # Ejemplos interactivos 360°
+        # ---------------------------------------------------------
+        if SPIN_EJEMPLOS:
+            st.markdown("##### 🔄 Ejemplos interactivos 360°")
+            st.caption(
+                "Haz clic sobre cada vista y arrastra la botella para visualizar el diseño completo."
+            )
+
+            cols_spin = st.columns(3)
+            for i, item in enumerate(SPIN_EJEMPLOS):
+                with cols_spin[i % 3]:
+                    with st.container(border=True):
+                        st.iframe(
+                            item["url"],
+                            height=260,
+                            width="stretch",
+                        )
+                        st.markdown(f"**{item['titulo']}**")
+                        if item.get("desc"):
+                            st.caption(item["desc"])
+
+        # ---------------------------------------------------------
+        # Ejemplos estáticos
+        # ---------------------------------------------------------
+        if ejemplos_disponibles:
+            st.markdown("##### 🖼️ Ejemplos estáticos")
+            cols_ej = st.columns(3)
+
+            for i, (fpath, titulo, desc) in enumerate(ejemplos_disponibles):
+                with cols_ej[i % 3]:
+                    with st.container(border=True):
+                        st.image(
+                            str(fpath),
+                            width=220
+                        )
+                        st.markdown(f"**{titulo}**")
+                        if desc:
+                            st.caption(desc)
 
 _gen = st.session_state.form_gen
 
