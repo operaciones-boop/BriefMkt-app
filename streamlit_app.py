@@ -597,10 +597,6 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(texto_bloque("Herramientas / referencias visuales (notas)", datos["herramientas_notas"]))
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Información adicional", datos["informacion_adicional"]))
-    if datos.get("link_archivos_pesados"):
-        story.append(Spacer(1, 0.12 * cm))
-        story.append(texto_bloque("Link a archivos pesados (WeTransfer / Drive / otro)",
-                                   datos["link_archivos_pesados"]))
 
     for titulo, archivos in adjuntos_por_seccion.items():
         story.extend(imagenes_seccion(titulo, archivos))
@@ -852,7 +848,20 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+# =========================================================
+# PRUEBA TEMPORAL — VISTA 360°
+# =========================================================
+with st.expander("🔄 Vista 360° · Edición Empresarial", expanded=True):
+    st.caption(
+        "Arrastra la botella hacia los lados para visualizar el diseño completo."
+    )
 
+    st.iframe(
+        "https://mariana01.sirv.com/Theralist/Theralist.spin",
+        height=560,
+        width="stretch",
+    )
+    
 ejemplos_disponibles = get_ejemplos_disponibles()
 if ejemplos_disponibles:
     with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
@@ -907,7 +916,7 @@ with st.container(border=True):
             placeholder="Ej. G&NC Asesores Patrimoniales", key=f"nombre_empresa_{_gen}")
         pagina_web = st.text_input("Página web",
             placeholder="https://tuempresa.com", key=f"pagina_web_{_gen}")
-        lider_nombre = st.text_input("Nombre líder del proyecto *",
+        lider_nombre = st.text_input("Contacto responsable de Proyecto *",
             placeholder="Nombre completo", key=f"lider_nombre_{_gen}")
         celular = st.text_input("Celular *",
             placeholder="Ej. 33 1234 5678", key=f"celular_{_gen}")
@@ -923,18 +932,32 @@ with st.container(border=True):
 
 
 # =========================================================
-# Volumen de producción
+# Presentación del producto
 # =========================================================
-section_header("🍶 Volumen de producción", "Opcional — si ya tienes una cantidad estimada")
+section_header(
+    "🍶 Presentación del producto",
+    "Selecciona la presentación para la que realizaremos el diseño"
+)
 
 with st.container(border=True):
+    st.caption(
+        "Puedes seleccionar una o ambas presentaciones. "
+        "Esto nos ayuda a considerar correctamente las proporciones y detalles del diseño en cada botella."
+    )
+
     colv1, colv2 = st.columns(2)
+
     with colv1:
-        cantidad_375 = st.number_input("375 ml — Cantidad", min_value=0, step=1, value=0,
-            key=f"cantidad_375_{_gen}")
+        presentacion_375 = st.checkbox(
+            "375 ml",
+            key=f"presentacion_375_{_gen}"
+        )
+
     with colv2:
-        cantidad_750 = st.number_input("750 ml — Cantidad", min_value=0, step=1, value=0,
-            key=f"cantidad_750_{_gen}")
+        presentacion_750 = st.checkbox(
+            "750 ml",
+            key=f"presentacion_750_{_gen}"
+        )
 
 
 # =========================================================
@@ -944,9 +967,8 @@ section_header("🎨 Características del diseño")
 
 with st.container(border=True):
     objetivo_diseno = st.text_area(
-        "Objetivo del diseño / Mensaje a comunicar *",
-        placeholder="¿Qué debe transmitir el diseño? Cuéntanos sobre tu marca, a quién le hablas y qué "
-                    "quieres lograr con este producto.",
+        "Objetivo del diseño / Mensaje a comunicar (¿Qué debe transmitir el diseño? Cuéntanos sobre tu marca, a quién le hablas y qué quieres lograr con este producto.)*",
+        placeholder="Mensaje abierto",
         height=120, key=f"objetivo_diseno_{_gen}")
 
     st.markdown("**Logo de empresa (adjuntar) ***")
@@ -970,9 +992,9 @@ with st.container(border=True):
         frase_eslogan = st.text_input("Frase o eslogan",
             placeholder="Opcional", key=f"frase_eslogan_{_gen}")
     with col4:
-        paleta_colores = st.text_input("Paleta de colores sugerida *",
-            placeholder="Ej. Colores del logotipo — tintos/rojos y negros",
-            key=f"paleta_colores_{_gen}")
+        paleta_colores = st.text_input("Colores sugeridos *",
+            placeholder="Mensaje abierto, Ej. Colores — tintos/rojos, azules, negros, etc",
+            key=f"Colores_sugeridos_{_gen}")
 
     estilo_sel = st.selectbox("Estilo deseado *", ESTILOS_SUGERIDOS,
         key=f"estilo_sel_{_gen}", format_func=formato_opcion_estilo, index=None,
@@ -1020,16 +1042,13 @@ with st.container(border=True):
                 else:
                     st.info(f"📎 {f.name}")
 
-    informacion_adicional = st.text_area(
-        "Información adicional *",
-        placeholder="Instrucciones especiales, datos del domicilio y contacto de la persona para "
-                    "entrega, fechas importantes, etc.",
-        height=100, key=f"informacion_adicional_{_gen}")
+   informacion_adicional = st.text_area(
+    "Notas o Comentarios",
+    placeholder="Opcional — instrucciones especiales, fechas importantes, comentarios o cualquier información que consideres relevante.",
+    height=100,
+    key=f"Notas_o_Comentarios_{_gen}"
+)
 
-    link_archivos_pesados = st.text_input(
-        "Link a archivos pesados (opcional — WeTransfer, Drive, etc.)",
-        placeholder="Si tus archivos son muy grandes, pega aquí el link como respaldo",
-        key=f"link_pesados_{_gen}")
 
 
 # =========================================================
@@ -1148,7 +1167,6 @@ if st.button(
         "elementos_graficos": elementos_graficos.strip(),
         "herramientas_notas": herramientas_notas.strip(),
         "informacion_adicional": informacion_adicional.strip(),
-        "link_archivos_pesados": link_archivos_pesados.strip(),
     }
 
     adjuntos_por_seccion = {
