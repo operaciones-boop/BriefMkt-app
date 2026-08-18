@@ -1,3 +1,8 @@
+ca
+/
+streamlit_app_EDICION_PERSONALIZADA.py
+
+
 import io
 import zipfile
 import smtplib
@@ -38,7 +43,7 @@ GREY_BORDER = "#D2D2D2"
 TEXT_DARK = "#1A1A1A"
 
 st.set_page_config(
-    page_title="Brief de Diseño · Círculo Tequila",
+    page_title="Brief de Diseño · Edición Personalizada · Círculo Tequila",
     page_icon="🎨",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -312,7 +317,7 @@ if solapa_path:
 st.markdown(
     """
     <div class="brand-bar">
-        <span>BRIEF DE DISEÑO · EDICIÓN EMPRESARIAL</span>
+        <span>BRIEF DE DISEÑO · EDICIÓN PERSONALIZADA</span>
         <small>Círculo Tequila · Marketing</small>
     </div>
     """,
@@ -362,7 +367,7 @@ class NumberedCanvas(canvas.Canvas):
         self.line(1.3 * cm, 1.20 * cm, width - 1.3 * cm, 1.20 * cm)
         self.setFont("Helvetica", 7.5)
         self.setFillColor(PDF_TEXT)
-        empresa = texto_canvas_seguro(self.empresa)
+        empresa = texto_canvas_seguro(self.empresa or "No especificada")
         proyecto = texto_canvas_seguro(self.proyecto)
         emp_txt = empresa if len(empresa) <= 36 else empresa[:33] + "..."
         proy_txt = proyecto if len(proyecto) <= 36 else proyecto[:33] + "..."
@@ -373,7 +378,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont("Helvetica-Oblique", 7)
         self.setFillColor(PDF_MUTED)
         self.drawCentredString(width / 2, 0.40 * cm,
-            "Círculo Tequila · Marketing — Brief de Diseño (Edición Empresarial)")
+            "Círculo Tequila · Marketing — Brief de Diseño (Edición Personalizada)")
 
 
 def _P(txt, style):
@@ -413,7 +418,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
 
     def title_banner():
         t = Table([[Paragraph("BRIEF DE DISEÑO", title_style)],
-                   [Paragraph("Edición Empresarial · Círculo Tequila", subtitle_style)]],
+                   [Paragraph("Edición Personalizada · Círculo Tequila", subtitle_style)]],
                   colWidths=[18.4 * cm])
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), PDF_RED),
@@ -562,10 +567,10 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(section_band("DATOS CLIENTE / EMPRESA"))
     story.append(Spacer(1, 0.15 * cm))
     story.append(kv4_table([
-        [L("Empresa"), V(datos["nombre_empresa"]), L("Proyecto"), V(datos["nombre_proyecto"])],
-        [L("Página web"), V(datos["pagina_web"]), L("Redes sociales"), V(datos["redes_sociales"])],
-        [L("Contacto responsable"), V(datos["lider_nombre"]), L("Puesto"), V(datos["lider_puesto"])],
+        [L("Proyecto"), V(datos["nombre_proyecto"]), L("Contacto responsable"), V(datos["lider_nombre"])],
         [L("Celular"), V(datos["celular"]), L("Correo"), V(datos["correo"])],
+        [L("Empresa"), V(datos["nombre_empresa"]), L("Puesto"), V(datos["lider_puesto"])],
+        [L("Página web"), V(datos["pagina_web"]), L("Redes sociales"), V(datos["redes_sociales"])],
     ]))
 
     story.append(Spacer(1, 0.30 * cm))
@@ -730,21 +735,22 @@ def enviar_correo(
         bcc.append(datos["correo"])
 
     msg = EmailMessage()
-    msg["Subject"] = (
-        f"Brief de Diseño · {datos['nombre_empresa']} — "
-        f"{datos['nombre_proyecto']}"
-    )
+    empresa_asunto = f"{datos['nombre_empresa']} — " if datos["nombre_empresa"] else ""
+    msg["Subject"] = f"Brief de Diseño · {empresa_asunto}{datos['nombre_proyecto']}"
     msg["From"] = f"{cfg['from_name']} <{cfg['user']}>"
     msg["To"] = ", ".join(destinatarios)
     msg["Reply-To"] = datos["correo"]
 
-    cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Empresarial).
+    puesto_txt = f" ({datos['lider_puesto']})" if datos["lider_puesto"] else ""
+    empresa_txt = datos["nombre_empresa"] or "No especificada"
 
-Empresa: {datos['nombre_empresa']}
+    cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Personalizada).
+
 Proyecto: {datos['nombre_proyecto']}
-Contacto responsable: {datos['lider_nombre']} ({datos['lider_puesto']})
+Contacto responsable: {datos['lider_nombre']}{puesto_txt}
 Celular: {datos['celular']}
 Correo: {datos['correo']}
+Empresa: {empresa_txt}
 
 El archivo ZIP adjunto contiene el brief completo en PDF y todos los archivos originales proporcionados por el cliente.
 
@@ -790,13 +796,25 @@ if st.session_state.submitted:
 
     if email_ok:
         st.success(res.get("email_msg", "✅ Brief enviado correctamente."))
-        mensaje_final = (
-            f"<b>¡Gracias, {escape(str(res.get('lider_nombre', '')))}! 🎉</b><br/>"
-            f"Recibimos el brief de <b>{escape(str(res.get('nombre_empresa', '')))}</b> "
-            f"para el proyecto <b>{escape(str(res.get('nombre_proyecto', '')))}</b>. "
-            "El equipo de diseño de Círculo Tequila lo revisará y se pondrá "
-            "en contacto contigo a la brevedad."
-        )
+        empresa_res = str(res.get("nombre_empresa", "") or "").strip()
+        proyecto_res = escape(str(res.get("nombre_proyecto", "")))
+        lider_res = escape(str(res.get("lider_nombre", "")))
+
+        if empresa_res:
+            mensaje_final = (
+                f"<b>¡Gracias, {lider_res}! 🎉</b><br/>"
+                f"Recibimos el brief de <b>{escape(empresa_res)}</b> "
+                f"para el proyecto <b>{proyecto_res}</b>. "
+                "El equipo de diseño de Círculo Tequila lo revisará y se pondrá "
+                "en contacto contigo a la brevedad."
+            )
+        else:
+            mensaje_final = (
+                f"<b>¡Gracias, {lider_res}! 🎉</b><br/>"
+                f"Recibimos el brief para el proyecto <b>{proyecto_res}</b>. "
+                "El equipo de diseño de Círculo Tequila lo revisará y se pondrá "
+                "en contacto contigo a la brevedad."
+            )
     else:
         st.warning(res.get(
             "email_msg",
@@ -917,24 +935,61 @@ section_header("🏢 Datos Cliente / Empresa")
 
 with st.container(border=True):
     col1, col2 = st.columns(2)
+
     with col1:
-        nombre_empresa = st.text_input("Nombre de la empresa *",
-            placeholder="Ej. G&NC Asesores Patrimoniales", key=f"nombre_empresa_{_gen}")
-        pagina_web = st.text_input("Página web",
-            placeholder="https://tuempresa.com", key=f"pagina_web_{_gen}")
-        lider_nombre = st.text_input("Contacto responsable de Proyecto *",
-            placeholder="Nombre completo", key=f"lider_nombre_{_gen}")
-        celular = st.text_input("Celular *",
-            placeholder="Ej. 33 1234 5678", key=f"celular_{_gen}")
+        nombre_proyecto = st.text_input(
+            "Nombre del proyecto *",
+            placeholder="Ej. Aniversario 25 años",
+            key=f"nombre_proyecto_{_gen}",
+        )
     with col2:
-        nombre_proyecto = st.text_input("Nombre del proyecto *",
-            placeholder="Ej. Lanzamiento línea corporativa", key=f"nombre_proyecto_{_gen}")
-        redes_sociales = st.text_input("Redes sociales",
-            placeholder="@tuempresa", key=f"redes_sociales_{_gen}")
-        lider_puesto = st.text_input("Puesto *",
-            placeholder="Ej. Gerente Comercial", key=f"lider_puesto_{_gen}")
-        correo = st.text_input("Correo *",
-            placeholder="nombre@empresa.com", key=f"correo_{_gen}")
+        lider_nombre = st.text_input(
+            "Contacto responsable de Proyecto *",
+            placeholder="Nombre completo",
+            key=f"lider_nombre_{_gen}",
+        )
+
+    col3, col4 = st.columns(2)
+    with col3:
+        celular = st.text_input(
+            "Celular *",
+            placeholder="Ej. 33 1234 5678",
+            key=f"celular_{_gen}",
+        )
+    with col4:
+        correo = st.text_input(
+            "Correo *",
+            placeholder="nombre@empresa.com",
+            key=f"correo_{_gen}",
+        )
+
+    col5, col6 = st.columns(2)
+    with col5:
+        nombre_empresa = st.text_input(
+            "Nombre de la empresa",
+            placeholder="Opcional",
+            key=f"nombre_empresa_{_gen}",
+        )
+    with col6:
+        lider_puesto = st.text_input(
+            "Puesto",
+            placeholder="Opcional — Ej. Gerente Comercial",
+            key=f"lider_puesto_{_gen}",
+        )
+
+    col7, col8 = st.columns(2)
+    with col7:
+        pagina_web = st.text_input(
+            "Página web",
+            placeholder="https://tuempresa.com",
+            key=f"pagina_web_{_gen}",
+        )
+    with col8:
+        redes_sociales = st.text_input(
+            "Redes sociales",
+            placeholder="@tuempresa",
+            key=f"redes_sociales_{_gen}",
+        )
 
 
 # =========================================================
@@ -1118,10 +1173,8 @@ with st.container(border=True):
 # Validaciones
 errores = []
 campos_requeridos = {
-    "Nombre de la empresa": nombre_empresa,
     "Nombre del proyecto": nombre_proyecto,
     "Contacto responsable del proyecto": lider_nombre,
-    "Puesto": lider_puesto,
     "Celular": celular,
     "Objetivo del diseño / Mensaje a comunicar": objetivo_diseno,
     "Elementos gráficos a incluir": elementos_graficos,
@@ -1190,15 +1243,20 @@ if st.button(
         ],
     }
 
-    empresa_archivo = nombre_archivo_seguro(
-        datos["nombre_empresa"],
-        "Empresa",
-    )
     proyecto_archivo = nombre_archivo_seguro(
         datos["nombre_proyecto"],
         "Proyecto",
     )
-    nombre_base = f"{empresa_archivo}_{proyecto_archivo}"
+
+    if datos["nombre_empresa"]:
+        empresa_archivo = nombre_archivo_seguro(
+            datos["nombre_empresa"],
+            "Empresa",
+        )
+        nombre_base = f"{empresa_archivo}_{proyecto_archivo}"
+    else:
+        nombre_base = proyecto_archivo
+
     pdf_name = f"Brief_{nombre_base}.pdf"
     zip_name = f"Paquete_Brief_{nombre_base}.zip"
 
