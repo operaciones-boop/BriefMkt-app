@@ -153,18 +153,7 @@ def get_solapa_path() -> Path | None:
 # imagen vive en assets/ejemplos/ junto al .py; si el archivo no existe (por
 # ejemplo, aún no lo subiste a tu repo), simplemente se omite sin romper la
 # app.
-EJEMPLOS_INFO = [
-    ("ejemplo_1_theralis.png", "Edición Empresarial",
-     "Diseño institucional/arquitectónico para un cliente corporativo."),
-    ("ejemplo_2_boda_myr.png", "Edición Personalizada",
-     "Boda — estilo artístico e ilustrado, con iniciales y fecha."),
-    ("ejemplo_3_20_aniversario.png", "Edición Conmemorativa",
-     "20° Aniversario — estilo gráfico y moderno."),
-    ("ejemplo_4_luna_llena.png", "Edición Artística",
-     "Ilustración original de autor, estilo mexicano contemporáneo."),
-    ("ejemplo_5_diagrama_impresion.png", "¿Cómo se ve al final?",
-     "La impresión cubre tanto la cara frontal como la trasera de la botella."),
-]
+
 SPIN_EJEMPLOS = [
     {
         "titulo": "Luna Llena",
@@ -197,31 +186,6 @@ SPIN_EJEMPLOS = [
         "desc": "Edición personalizada · vista 360°",
     },
 ]
-
-
-def get_ejemplos_disponibles() -> list:
-    base = Path(__file__).resolve().parent / "assets" / "ejemplos"
-    disponibles = []
-    for fname, titulo, desc in EJEMPLOS_INFO:
-        fpath = base / fname
-        if fpath.exists():
-            disponibles.append((fpath, titulo, desc))
-    if disponibles:
-        return disponibles
-
-    # Respaldo: si los nombres de archivo no coinciden exactamente (por
-    # ejemplo, algunas herramientas de subida de archivos truncan los
-    # nombres a formato "8.3" tipo EJEMPL~1.PNG), se muestra de todas
-    # formas cualquier imagen que exista en la carpeta, con un título
-    # genérico, en vez de dejar la galería vacía.
-    if base.exists():
-        extensiones = (".png", ".jpg", ".jpeg", ".webp")
-        for i, fpath in enumerate(sorted(base.iterdir()), start=1):
-            if fpath.is_file() and fpath.suffix.lower() in extensiones:
-                disponibles.append((fpath, f"Ejemplo {i}", ""))
-    return disponibles
-
-
 def section_header(title: str, sub: str = ""):
     sub_html = f'<span class="sub"> · {sub}</span>' if sub else ""
     st.markdown(
@@ -638,7 +602,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Herramientas / referencias visuales (notas)", datos["herramientas_notas"]))
     story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Información adicional", datos["informacion_adicional"]))
+    story.append(texto_bloque("Notas / comentarios", datos["informacion_adicional"]))
 
     for titulo, archivos in adjuntos_por_seccion.items():
         story.extend(imagenes_seccion(titulo, archivos))
@@ -892,55 +856,31 @@ st.markdown(
 )
 
 
-ejemplos_disponibles = get_ejemplos_disponibles()
-mostrar_galeria = bool(ejemplos_disponibles or SPIN_EJEMPLOS)
-
-if mostrar_galeria:
+if SPIN_EJEMPLOS:
     with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
         st.caption(
             "Estos son algunos diseños que ya creamos para otros clientes — solo para "
             "darte una idea de las posibilidades antes de describir el tuyo."
         )
 
-        # ---------------------------------------------------------
-        # Ejemplos interactivos 360°
-        # ---------------------------------------------------------
-        if SPIN_EJEMPLOS:
-            st.markdown("##### 🔄 Ejemplos interactivos 360°")
-            st.caption(
-                "Haz clic sobre cada vista y arrastra la botella para visualizar el diseño completo."
-            )
+        st.markdown("##### 🔄 Ejemplos interactivos 360°")
+        st.caption(
+            "Haz clic sobre cada vista y arrastra la botella para visualizar el diseño completo."
+        )
 
-            cols_spin = st.columns(3)
-            for i, item in enumerate(SPIN_EJEMPLOS):
-                with cols_spin[i % 3]:
-                    with st.container(border=True):
-                        st.iframe(
-                            item["url"],
-                            height=260,
-                            width="stretch",
-                        )
-                        st.markdown(f"**{item['titulo']}**")
-                        if item.get("desc"):
-                            st.caption(item["desc"])
+        cols_spin = st.columns(3)
+        for i, item in enumerate(SPIN_EJEMPLOS):
+            with cols_spin[i % 3]:
+                with st.container(border=True):
+                    st.iframe(
+                        item["url"],
+                        height=260,
+                        width="stretch",
+                    )
+                    st.markdown(f"**{item['titulo']}**")
+                    if item.get("desc"):
+                        st.caption(item["desc"])
 
-        # ---------------------------------------------------------
-        # Ejemplos estáticos
-        # ---------------------------------------------------------
-        if ejemplos_disponibles:
-            st.markdown("##### 🖼️ Ejemplos estáticos")
-            cols_ej = st.columns(3)
-
-            for i, (fpath, titulo, desc) in enumerate(ejemplos_disponibles):
-                with cols_ej[i % 3]:
-                    with st.container(border=True):
-                        st.image(
-                            str(fpath),
-                            width=220
-                        )
-                        st.markdown(f"**{titulo}**")
-                        if desc:
-                            st.caption(desc)
 
 _gen = st.session_state.form_gen
 
@@ -1081,8 +1021,8 @@ with st.container(border=True):
  
 
     informacion_adicional = st.text_area(
-        "Información adicional",
-        placeholder="Opcional — instrucciones especiales, fechas importantes, comentarios o cualquier información que consideres relevante.",
+        "Notas / comentarios",
+        placeholder="Opcional — agrega aquí cualquier nota, comentario o indicación que consideres relevante a considerar.",
         height=100,
         key=f"informacion_adicional_{_gen}"
     )
@@ -1142,7 +1082,25 @@ elif peso_total > 0:
         f"Peso total: {tam_legible(peso_total)} de "
         f"{TAMANO_MAX_ADJUNTOS_MB} MB permitidos."
     )
-
+st.markdown(
+    """
+    <div style="
+        background:#F2F2F2;
+        border-left:4px solid #555555;
+        padding:12px 16px;
+        border-radius:6px;
+        margin-top:18px;
+        margin-bottom:18px;
+        font-size:0.86rem;
+        color:#444444;
+    ">
+        <b>Nota:</b> Los colores y acabados visualizados en pantalla son de carácter
+        referencial y pueden presentar variaciones respecto al resultado final
+        una vez impresos sobre la botella.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =========================================================
 # Aceptación y envío
@@ -1284,4 +1242,3 @@ if st.button(
     }
     st.session_state.submitted = True
     st.rerun()
-    
