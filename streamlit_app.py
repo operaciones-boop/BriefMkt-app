@@ -857,23 +857,16 @@ if st.session_state.submitted:
 st.markdown(
     """
     <div class="intro-card">
-        👋 <b>¡Hola! Este formulario nos ayuda a entender exactamente qué necesitas
-        para tu diseño.</b><br/>
-        Tómate unos minutos para llenarlo con el mayor detalle posible — entre más
-        clara sea la información, más rápido y preciso será el resultado. Los campos
-        marcados con <b>*</b> son obligatorios. Puedes adjuntar imágenes y archivos
-        de referencia directamente dentro del formulario.
-    </div>
-    """,
+        👋 <b>¡Hola! Este Brief nos ayudará a comprender con mayor claridad lo que deseas comunicar y plasmar en tu diseño, para desarrollar una propuesta precisa y alineada a lo que tienes en mente.</b><br/>
+        Por favor, completa la información solicitada con el mayor detalle posible. Los campos marcados con <b>*</b> son obligatorios.</div>""",
     unsafe_allow_html=True,
 )
 
 
 if SPIN_EJEMPLOS:
-    with st.expander("🎨 Inspírate: ejemplos de lo que puedes lograr", expanded=True):
+    with st.expander("🎨 <b> Conoce algunos ejemplos.</b>", expanded=True):
         st.caption(
-            "Estos son algunos diseños que ya creamos para otros clientes — solo para "
-            "darte una idea de las posibilidades antes de describir el tuyo."
+            "Estos son algunos diseños que ya creamos para otros clientes que pueden servir como referencia e inspiración para el desarrollo de tu diseño. "
         )
 
         st.markdown("##### 🔄 Ejemplos interactivos 360°")
@@ -992,13 +985,11 @@ with st.container(border=True):
 # =========================================================
 section_header(
     "🍶 Presentación del producto",
-    "Selecciona la presentación para la que realizaremos el diseño"
 )
 
 with st.container(border=True):
     st.caption(
-        "Puedes seleccionar una o ambas presentaciones. "
-        "Esto nos ayuda a considerar correctamente las proporciones y detalles del diseño en cada botella."
+        "Selecciona una o ambas presentaciones. Esto nos ayudará a considerar el espacio disponible y adaptar correctamente tu diseño. "
     )
 
     colv1, colv2 = st.columns(2)
