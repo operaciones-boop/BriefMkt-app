@@ -1,3 +1,6 @@
+
+
+
 import io
 import zipfile
 import smtplib
@@ -92,6 +95,14 @@ st.markdown(
         border: 1px solid {GREY_BORDER} !important;
         border-radius: 8px !important;
     }}
+
+    /* Título del expander de ejemplos */
+    div[data-testid="stExpander"] summary p {{
+        font-size: 1.08rem !important;
+        font-weight: 700 !important;
+        color: {TEXT_DARK} !important;
+    }}
+
     .stAlert {{ border-radius: 8px; }}
     </style>
     """,
@@ -184,6 +195,21 @@ SPIN_EJEMPLOS = [
         "titulo": "Boda M&R",
         "url": "https://mariana01.sirv.com/M%26R/M%26R.spin?initializeOn=click",
         "desc": "Edición personalizada · vista 360°",
+    },
+    {
+        "titulo": "Nadadora",
+        "url": "https://mariana01.sirv.com/Turismo%2002/Turismo%2002.spin?initializeOn=click",
+        "desc": "Vista 360°",
+    },
+    {
+        "titulo": "Wedding Week",
+        "url": "https://mariana01.sirv.com/Wedding%20Week/Otra%20wedding%20week/Otra%20wedding%20week.spin?initializeOn=click",
+        "desc": "Vista 360°",
+    },
+    {
+        "titulo": "Unión",
+        "url": "https://mariana01.sirv.com/Uni%C3%B3n/Uni%C3%B3n.spin?initializeOn=click",
+        "desc": "Vista 360°",
     },
 ]
 def section_header(title: str, sub: str = ""):
@@ -864,7 +890,7 @@ st.markdown(
 
 
 if SPIN_EJEMPLOS:
-    with st.expander("🎨 <b> Conoce algunos ejemplos.</b>", expanded=True):
+    with st.expander("Conoce algunos diseños", expanded=True):
         st.caption(
             "Estos son algunos diseños que ya creamos para otros clientes que pueden servir como referencia e inspiración para el desarrollo de tu diseño. "
         )
@@ -1126,18 +1152,31 @@ elif peso_total > 0:
 st.markdown(
     """
     <div style="
-        background:#F2F2F2;
-        border-left:4px solid #555555;
-        padding:12px 16px;
-        border-radius:6px;
-        margin-top:18px;
-        margin-bottom:18px;
-        font-size:0.86rem;
-        color:#444444;
+        background:#F7F7F7;
+        border:1px solid #D7D7D7;
+        border-left:5px solid #6B6B6B;
+        padding:15px 18px;
+        border-radius:8px;
+        margin-top:20px;
+        margin-bottom:20px;
+        font-size:0.96rem;
+        line-height:1.45;
+        color:#333333;
+        box-shadow:0 1px 4px rgba(0,0,0,0.06);
     ">
-        <b>Nota:</b> Los colores y acabados visualizados en pantalla son de carácter
-        referencial y pueden presentar variaciones respecto al resultado final
-        una vez impresos sobre la botella.
+        <div style="
+            font-weight:700;
+            font-size:1rem;
+            margin-bottom:4px;
+            color:#222222;
+        ">
+            ℹ️ Aviso sobre colores y acabados
+        </div>
+        <div>
+            Los colores y acabados mostrados en pantalla son referenciales y pueden
+            presentar ligeras variaciones respecto al resultado final una vez impresos
+            sobre la botella.
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
