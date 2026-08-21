@@ -1052,7 +1052,7 @@ with st.container(border=True):
     with col4:
         paleta_colores = st.text_input(
             "Colores sugeridos",
-            placeholder="Opcional — Ej. negro, gris, plata, dorado, azul, rojo, etc.",
+            placeholder="Opcional — Ej. negro, gris, azul, rojo, etc., excepto plata y dorado o cualquier color brillante",
             key=f"paleta_colores_{_gen}"
         )
 
