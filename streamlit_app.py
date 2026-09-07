@@ -1,6 +1,3 @@
-
-
-
 import io
 import zipfile
 import smtplib
@@ -609,7 +606,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.30 * cm))
     story.append(section_band("CARACTERÍSTICAS DEL DISEÑO"))
     story.append(Spacer(1, 0.15 * cm))
-    story.append(texto_bloque("Objetivo del diseño / Mensaje a comunicar", datos["objetivo_diseno"]))
+    story.append(texto_bloque("¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]))
     story.append(Spacer(1, 0.12 * cm))
     story.append(kv4_table([
         [
@@ -622,11 +619,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Colores sugeridos", datos["paleta_colores"]))
     story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Iconografía o símbolos relevantes", datos["iconografia"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Elementos gráficos a incluir", datos["elementos_graficos"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Herramientas / referencias visuales (notas)", datos["herramientas_notas"]))
+    story.append(texto_bloque("Elementos gráficos relevantes a incluir", datos["elementos_graficos"]))
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Notas / comentarios", datos["informacion_adicional"]))
 
@@ -641,8 +634,8 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
 
     aceptacion = Table([[Paragraph(
         f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
-        f"({correo_pdf}) el {fecha_pdf}. El material gráfico adjunto "
-        f"se entrega para uso exclusivo de diseño de este proyecto.</i>",
+        f"({correo_pdf}) el {fecha_pdf}. La información y los archivos adjuntos "
+        f"se proporcionan para el desarrollo del diseño solicitado.</i>",
         body_style)]], colWidths=[18.4 * cm])
     aceptacion.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER), ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
@@ -909,9 +902,6 @@ if SPIN_EJEMPLOS:
                         height=260,
                         width="stretch",
                     )
-                    st.markdown(f"**{item['titulo']}**")
-                    if item.get("desc"):
-                        st.caption(item["desc"])
 
 
 _gen = st.session_state.form_gen
@@ -1040,9 +1030,11 @@ section_header("🎨 Características del diseño")
 
 with st.container(border=True):
     objetivo_diseno = st.text_area(
-        "Objetivo del diseño / Mensaje a comunicar (¿Qué debe transmitir el diseño? Cuéntanos sobre tu marca, a quién le hablas y qué quieres lograr con este producto.)*",
+        "¿Qué quieres comunicar y lograr con este diseño? *",
         placeholder="Mensaje abierto",
-        height=120, key=f"objetivo_diseno_{_gen}")
+        height=120,
+        key=f"objetivo_diseno_{_gen}"
+    )
 
 
     col3, col4 = st.columns(2)
@@ -1052,7 +1044,7 @@ with st.container(border=True):
     with col4:
         paleta_colores = st.text_input(
             "Colores sugeridos",
-            placeholder="Opcional — Ej. negro, gris, azul, rojo, etc., excepto plata y dorado o cualquier color brillante",
+            placeholder="Opcional",
             key=f"paleta_colores_{_gen}"
         )
 
@@ -1065,47 +1057,37 @@ with st.container(border=True):
             placeholder="Ej. Vintage, industrial, playero, etc.", key=f"estilo_otro_{_gen}")
     estilo_deseado = estilo_otro.strip() if estilo_sel == "Otro (especifica)" else (estilo_sel or "")
 
-    iconografia = st.text_area(
-        "Iconografía o símbolos relevantes",
-        placeholder="Ej. logro, escudo, protección, finanzas, dinero, acompañamiento, asesoría...",
-        height=80,
-        key=f"iconografia_{_gen}"
-    )
-
-
     elementos_graficos = st.text_area(
-        "Elementos gráficos a incluir *",
-        placeholder="Describe todo lo que deseas que aparezca en el diseño: nombre comercial, "
-                    "palabras clave, fechas, frases, ilustraciones, símbolos u otros elementos.",
-        height=110,
+        "Elementos gráficos relevantes a incluir *",
+        placeholder=(
+            "Describe o pega links de todo lo que deseas que aparezca en el diseño. "
+            "Las referencias nos ayudarán a entender tu idea y tomarlas como inspiración."
+        ),
+        height=130,
         key=f"elementos_graficos_{_gen}"
     )
 
-    herramientas_notas = st.text_area(
-        "Herramientas / referencias visuales (notas o links)",
-        placeholder="Opcional — describe o pega links de moodboards, manuales de marca, Pinterest, etc.",
-        height=80, key=f"herramientas_notas_{_gen}")
- 
-
-    informacion_adicional = st.text_area(
-        "Notas / comentarios",
-        placeholder="Opcional — agrega aquí cualquier nota, comentario o indicación que consideres relevante a considerar.",
-        height=100,
-        key=f"informacion_adicional_{_gen}"
-    )
-
-    st.markdown("**📎 Archivos de referencia**")
+    st.markdown("**📎 Adjunta tus archivos ***")
 
     st.caption(
-        "Adjunta aquí cualquier material que pueda ayudarnos a entender mejor tu idea: "
-        "imágenes, fotografías, ilustraciones, manuales de marca, PDFs, referencias visuales, etc."
+        "Adjunta los archivos necesarios para desarrollar tu idea. "
+        "Incluye cualquier material relevante que debamos considerar, como identidad gráfica, "
+        "imágenes, fotografías, ilustraciones, textos, manuales, referencias visuales, PDFs "
+        "o archivos vectoriales (AI, EPS o SVG), según aplique a tu proyecto."
     )
 
     adjuntos_files = st.file_uploader(
-        "Adjuntar archivos (opcional)",
+        "Adjuntar archivos",
         type=TIPOS_ADJUNTOS_PERMITIDOS,
         accept_multiple_files=True,
         key=f"adjuntos_files_{_gen}"
+    )
+
+    informacion_adicional = st.text_area(
+        "Notas / comentarios",
+        placeholder="Opcional — agrega aquí cualquier nota, comentario o indicación que consideres relevante.",
+        height=100,
+        key=f"informacion_adicional_{_gen}"
     )
 
     if adjuntos_files:
@@ -1152,9 +1134,9 @@ elif peso_total > 0:
 st.markdown(
     """
     <div style="
-        background:#F7F7F7;
-        border:1px solid #D7D7D7;
-        border-left:5px solid #6B6B6B;
+        background:#FFF7F7;
+        border:1px solid #E7CACA;
+        border-left:5px solid #C0392B;
         padding:15px 18px;
         border-radius:8px;
         margin-top:20px;
@@ -1162,20 +1144,20 @@ st.markdown(
         font-size:0.96rem;
         line-height:1.45;
         color:#333333;
-        box-shadow:0 1px 4px rgba(0,0,0,0.06);
+        box-shadow:0 1px 4px rgba(0,0,0,0.05);
     ">
         <div style="
             font-weight:700;
             font-size:1rem;
             margin-bottom:4px;
-            color:#222222;
+            color:#9B2C24;
         ">
-            ℹ️ Aviso sobre colores y acabados
+            ⚠️ Aviso sobre colores y acabados
         </div>
         <div>
-            Los colores y acabados mostrados en pantalla son referenciales y pueden
-            presentar ligeras variaciones respecto al resultado final una vez impresos
-            sobre la botella.
+            Ten en cuenta que los colores y acabados pueden presentar ligeras variaciones
+            una vez impresos sobre la botella, por lo que el resultado final puede diferir
+            ligeramente de lo visualizado en pantalla.
         </div>
     </div>
     """,
@@ -1191,9 +1173,10 @@ with st.container(border=True):
     copia_cliente = st.checkbox("Quiero recibir una copia de este brief en mi correo",
         key=f"copia_cliente_{_gen}")
     acepto = st.checkbox(
-        "Confirmo que la información proporcionada es correcta y autorizo a Círculo Tequila "
-        "a usarla para el diseño solicitado. *",
-        key=f"acepto_{_gen}")
+        "Confirmo que la información y archivos proporcionados son correctos y autorizo a "
+        "Círculo Tequila a utilizarlos para desarrollar el diseño solicitado. *",
+        key=f"acepto_{_gen}"
+    )
 
 # Validaciones
 errores = []
@@ -1201,8 +1184,8 @@ campos_requeridos = {
     "Nombre del proyecto": nombre_proyecto,
     "Contacto responsable del proyecto": lider_nombre,
     "Celular": celular,
-    "Objetivo del diseño / Mensaje a comunicar": objetivo_diseno,
-    "Elementos gráficos a incluir": elementos_graficos,
+    "¿Qué quieres comunicar y lograr con este diseño?": objetivo_diseno,
+    "Elementos gráficos relevantes a incluir": elementos_graficos,
 }
 for etiqueta, valor in campos_requeridos.items():
     if not valor.strip():
@@ -1224,6 +1207,9 @@ if peso_total_excedido:
         f"• Los archivos adjuntos superan el límite total de "
         f"{TAMANO_MAX_ADJUNTOS_MB} MB"
     )
+
+if not adjuntos_files:
+    errores.append("• Adjunta tus archivos")
 
 if not acepto:
     errores.append("• Debes confirmar la casilla de aceptación")
@@ -1255,9 +1241,7 @@ if st.button(
         "frase_eslogan": frase_eslogan.strip(),
         "paleta_colores": paleta_colores.strip(),
         "estilo_deseado": estilo_deseado.strip(),
-        "iconografia": iconografia.strip(),
         "elementos_graficos": elementos_graficos.strip(),
-        "herramientas_notas": herramientas_notas.strip(),
         "informacion_adicional": informacion_adicional.strip(),
     }
 
