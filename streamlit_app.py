@@ -111,15 +111,6 @@ MESES_ES = {
     7: "JULIO", 8: "AGOSTO", 9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
 }
 
-ESTILOS_SUGERIDOS = [
-    "Tradicional mexicano",
-    "Minimalista",
-    "Corporativo",
-    "Artístico / Ilustrado",
-    "Elegante / Premium",
-    "Moderno / Geométrico",
-    "Otro (especifica)",
-]
 
 TAMANO_MAX_ADJUNTOS_MB = 15
 TAMANO_MAX_ZIP_CORREO_MB = 18
@@ -215,28 +206,6 @@ def section_header(title: str, sub: str = ""):
         f'<div class="section-header"><h3>{title}{sub_html}</h3></div>',
         unsafe_allow_html=True,
     )
-
-
-def bold_unicode(text: str) -> str:
-    """Convierte letras/números ASCII a Unicode 'Mathematical Bold', para
-    resaltar visualmente una opción dentro de un st.selectbox."""
-    out = []
-    for ch in text:
-        if 'A' <= ch <= 'Z':
-            out.append(chr(0x1D400 + (ord(ch) - ord('A'))))
-        elif 'a' <= ch <= 'z':
-            out.append(chr(0x1D41A + (ord(ch) - ord('a'))))
-        elif '0' <= ch <= '9':
-            out.append(chr(0x1D7CE + (ord(ch) - ord('0'))))
-        else:
-            out.append(ch)
-    return ''.join(out)
-
-
-def formato_opcion_estilo(opt: str) -> str:
-    if opt == "Otro (especifica)":
-        return f"✏️ {bold_unicode(opt.upper())}"
-    return opt
 
 
 def es_imagen(nombre: str) -> bool:
@@ -607,15 +576,6 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(section_band("CARACTERÍSTICAS DEL DISEÑO"))
     story.append(Spacer(1, 0.15 * cm))
     story.append(texto_bloque("¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(kv4_table([
-        [
-            L("Frase o eslogan"),
-            V(datos["frase_eslogan"]),
-            L("Estilo deseado"),
-            V(datos["estilo_deseado"]),
-        ],
-    ]))
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Colores sugeridos", datos["paleta_colores"]))
     story.append(Spacer(1, 0.12 * cm))
@@ -1037,25 +997,11 @@ with st.container(border=True):
     )
 
 
-    col3, col4 = st.columns(2)
-    with col3:
-        frase_eslogan = st.text_input("Frase o eslogan",
-            placeholder="Opcional", key=f"frase_eslogan_{_gen}")
-    with col4:
-        paleta_colores = st.text_input(
-            "Colores sugeridos",
-            placeholder="Opcional",
-            key=f"paleta_colores_{_gen}"
-        )
-
-    estilo_sel = st.selectbox("Estilo deseado *", ESTILOS_SUGERIDOS,
-        key=f"estilo_sel_{_gen}", format_func=formato_opcion_estilo, index=None,
-        placeholder="Selecciona una opción")
-    estilo_otro = ""
-    if estilo_sel == "Otro (especifica)":
-        estilo_otro = st.text_input("Especifica el estilo deseado *",
-            placeholder="Ej. Vintage, industrial, playero, etc.", key=f"estilo_otro_{_gen}")
-    estilo_deseado = estilo_otro.strip() if estilo_sel == "Otro (especifica)" else (estilo_sel or "")
+    paleta_colores = st.text_input(
+        "Colores sugeridos",
+        placeholder="Opcional",
+        key=f"paleta_colores_{_gen}"
+    )
 
     elementos_graficos = st.text_area(
         "Elementos gráficos relevantes a incluir *",
@@ -1196,9 +1142,6 @@ if not correo.strip():
 elif not es_correo_valido(correo):
     errores.append("• Correo (formato no válido)")
 
-if not estilo_deseado.strip():
-    errores.append("• Estilo deseado")
-
 if not presentacion_375 and not presentacion_750:
     errores.append("• Selecciona al menos una presentación: 375 ml o 750 ml")
 
@@ -1238,9 +1181,7 @@ if st.button(
         "presentacion_375": bool(presentacion_375),
         "presentacion_750": bool(presentacion_750),
         "objetivo_diseno": objetivo_diseno.strip(),
-        "frase_eslogan": frase_eslogan.strip(),
         "paleta_colores": paleta_colores.strip(),
-        "estilo_deseado": estilo_deseado.strip(),
         "elementos_graficos": elementos_graficos.strip(),
         "informacion_adicional": informacion_adicional.strip(),
     }
