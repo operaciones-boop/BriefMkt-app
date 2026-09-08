@@ -126,6 +126,24 @@ TIPOS_ADJUNTOS_PERMITIDOS = [
     "eps",
 ]
 
+ASESORES = {
+    "Mercedes Baltazar": "mbaltazar@circulotequila.com",
+    "Jorge Ocampo": "turismo@circulotequila.com",
+    "Nancy Madariaga": "nancymadariaga@circulotequila.com",
+    "Cinthya Sandoval": "ventas@circulotequila.com",
+    "Arturo García": "algarcia@circulotequila.com",
+    "Gustavo Aguiar": "gaguiar@circulotequila.com",
+    "Fabiola Chacón": "fabychacon.circulotequila@gmail.com",
+    "Silvia Almaraz": "empresarial.cdmx@circulotequila.com",
+    "Marielle Estrada": "recursoshumanos@circulotequila.com",
+    "Kenia Torres": "mktdigital@circulotequila.com",
+    "Ricardo Salcedo": "rsalcedo@circulotequila.com",
+    "Israel Chavira": "ichavira@circulotequila.com",
+    "Antonio Rodríguez": "operaciones@circulotequila.com",
+}
+
+ASESOR_OTRO = "Otro / No aparece en la lista"
+
 
 # =========================================================
 # Helpers
@@ -555,8 +573,9 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.15 * cm))
     story.append(kv4_table([
         [L("Proyecto"), V(datos["nombre_proyecto"]), L("Contacto responsable"), V(datos["lider_nombre"])],
-        [L("Celular"), V(datos["celular"]), L("Correo"), V(datos["correo"])],
-        [L("Empresa"), V(datos["nombre_empresa"]), L("Puesto"), V(datos["lider_puesto"])],
+        [L("Celular"), V(datos["celular"]), L("Correo principal"), V(datos["correo"])],
+        [L("Empresa"), V(datos["nombre_empresa"]), L("Correo adicional"), V(datos["correo_adicional"])],
+        [L("Puesto"), V(datos["lider_puesto"]), L("Asesor"), V(datos["asesor_nombre"])],
         [L("Página web"), V(datos["pagina_web"]), L("Redes sociales"), V(datos["redes_sociales"])],
     ]))
 
@@ -683,15 +702,14 @@ def enviar_correo(
     datos: dict,
     zip_bytes: bytes,
     zip_name: str,
-    copia_cliente: bool,
 ) -> tuple[bool, str]:
-    """Envía únicamente el paquete ZIP mediante SMTP SSL."""
+    """Envía el mismo paquete ZIP a Diseño, cliente(s) y asesor mediante SMTP SSL."""
     cfg = get_smtp_config()
 
     if cfg is None:
         return False, (
             "El envío automático aún no está configurado. "
-            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
+            "Descarga el paquete ZIP y compártelo manualmente con el equipo de Diseño."
         )
 
     limite_zip_bytes = TAMANO_MAX_ZIP_CORREO_MB * 1024 * 1024
@@ -699,40 +717,64 @@ def enviar_correo(
         return False, (
             f"El paquete ZIP pesa {tam_legible(len(zip_bytes))} y supera el límite "
             f"de {TAMANO_MAX_ZIP_CORREO_MB} MB para envío automático. "
-            "Descárgalo y compártelo manualmente con Marketing."
+            "Descárgalo y compártelo manualmente con el equipo de Diseño."
         )
 
-    destinatarios = [
-        correo.strip()
-        for correo in str(cfg["to_email"]).split(",")
-        if correo.strip()
+    destinatarios_diseno = [
+        correo_destino.strip()
+        for correo_destino in str(cfg["to_email"]).split(",")
+        if correo_destino.strip()
     ]
-    if not destinatarios:
+    if not destinatarios_diseno:
         return False, "No hay destinatarios configurados en [brief].to_email."
 
+    # Cliente principal + correo adicional + asesor registrado.
+    destinatarios_copia = []
+
+    if es_correo_valido(datos["correo"]):
+        destinatarios_copia.append(datos["correo"])
+
+    if datos.get("correo_adicional") and es_correo_valido(datos["correo_adicional"]):
+        destinatarios_copia.append(datos["correo_adicional"])
+
+    if datos.get("asesor_correo") and es_correo_valido(datos["asesor_correo"]):
+        destinatarios_copia.append(datos["asesor_correo"])
+
+    # Evita correos duplicados, conservando el orden.
+    diseno_lower = {correo_destino.lower() for correo_destino in destinatarios_diseno}
+    vistos = set()
     bcc = []
-    if copia_cliente and es_correo_valido(datos["correo"]):
-        bcc.append(datos["correo"])
+    for correo_destino in destinatarios_copia:
+        clave = correo_destino.lower()
+        if clave not in vistos and clave not in diseno_lower:
+            bcc.append(correo_destino)
+            vistos.add(clave)
 
     msg = EmailMessage()
     empresa_asunto = f"{datos['nombre_empresa']} — " if datos["nombre_empresa"] else ""
     msg["Subject"] = f"Brief de Diseño · {empresa_asunto}{datos['nombre_proyecto']}"
     msg["From"] = f"{cfg['from_name']} <{cfg['user']}>"
-    msg["To"] = ", ".join(destinatarios)
+    msg["To"] = ", ".join(destinatarios_diseno)
     msg["Reply-To"] = datos["correo"]
 
     puesto_txt = f" ({datos['lider_puesto']})" if datos["lider_puesto"] else ""
     empresa_txt = datos["nombre_empresa"] or "No especificada"
+    correo_adicional_txt = datos["correo_adicional"] or "No especificado"
+    asesor_txt = datos["asesor_nombre"] or "No especificado"
 
     cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Personalizada).
 
 Proyecto: {datos['nombre_proyecto']}
 Contacto responsable: {datos['lider_nombre']}{puesto_txt}
 Celular: {datos['celular']}
-Correo: {datos['correo']}
+Correo principal: {datos['correo']}
+Correo adicional: {correo_adicional_txt}
 Empresa: {empresa_txt}
+Asesor que atendió al cliente: {asesor_txt}
 
 El archivo ZIP adjunto contiene el brief completo en PDF y todos los archivos originales proporcionados por el cliente.
+
+Este mismo material fue enviado al equipo de Diseño, al cliente y al asesor registrado cuando corresponde.
 
 Este correo se generó automáticamente desde el formulario del brief."""
     msg.set_content(cuerpo)
@@ -752,20 +794,19 @@ Este correo se generó automáticamente desde el formulario del brief."""
             server.login(cfg["user"], cfg["password"])
             server.send_message(
                 msg,
-                to_addrs=destinatarios + bcc,
+                to_addrs=destinatarios_diseno + bcc,
             )
 
         return True, (
             "✅ Tu brief y sus archivos se enviaron correctamente "
-            "al equipo de Marketing."
+            "al equipo de Diseño y a los correos correspondientes."
         )
     except Exception as error:
         return False, (
             f"No se pudo enviar el correo automáticamente "
             f"({type(error).__name__}: {error}). "
-            "Descarga el paquete ZIP y compártelo manualmente con Marketing."
+            "Descarga el paquete ZIP y compártelo manualmente con el equipo de Diseño."
         )
-
 
 # =========================================================
 # Pantalla de éxito (después de enviar)
@@ -802,7 +843,7 @@ if st.session_state.submitted:
         ))
         mensaje_final = (
             "<b>El paquete fue generado correctamente, pero no se confirmó su envío "
-            "por correo.</b><br/>Descarga el ZIP y compártelo manualmente con Marketing."
+            "por correo.</b><br/>Descarga el ZIP y compártelo manualmente con el equipo de Diseño."
         )
 
     st.markdown(
@@ -928,7 +969,7 @@ with st.container(border=True):
         )
     with col4:
         correo = st.text_input(
-            "Correo *",
+            "Correo principal *",
             placeholder="nombre@empresa.com",
             key=f"correo_{_gen}",
         )
@@ -941,26 +982,56 @@ with st.container(border=True):
             key=f"nombre_empresa_{_gen}",
         )
     with col6:
+        correo_adicional = st.text_input(
+            "Correo adicional",
+            placeholder="Opcional",
+            key=f"correo_adicional_{_gen}",
+        )
+
+    col7, col8 = st.columns(2)
+    with col7:
         lider_puesto = st.text_input(
             "Puesto",
             placeholder="Opcional — Ej. Gerente Comercial",
             key=f"lider_puesto_{_gen}",
         )
+    with col8:
+        asesor_sel = st.selectbox(
+            "Asesor que te atendió *",
+            options=list(ASESORES.keys()) + [ASESOR_OTRO],
+            index=None,
+            placeholder="Selecciona una opción",
+            key=f"asesor_sel_{_gen}",
+        )
 
-    col7, col8 = st.columns(2)
-    with col7:
+        asesor_otro = ""
+        if asesor_sel == ASESOR_OTRO:
+            asesor_otro = st.text_input(
+                "Nombre de la persona que te atendió *",
+                placeholder="Escribe su nombre",
+                key=f"asesor_otro_{_gen}",
+            )
+
+    asesor_nombre = (
+        asesor_otro.strip()
+        if asesor_sel == ASESOR_OTRO
+        else (asesor_sel or "")
+    )
+    asesor_correo = ASESORES.get(asesor_sel, "") if asesor_sel else ""
+
+    col9, col10 = st.columns(2)
+    with col9:
         pagina_web = st.text_input(
             "Página web",
             placeholder="https://tuempresa.com",
             key=f"pagina_web_{_gen}",
         )
-    with col8:
+    with col10:
         redes_sociales = st.text_input(
             "Redes sociales",
             placeholder="@tuempresa",
             key=f"redes_sociales_{_gen}",
         )
-
 
 # =========================================================
 # Presentación del producto
@@ -1163,8 +1234,11 @@ st.markdown(
 section_header("✅ Confirmación y envío")
 
 with st.container(border=True):
-    copia_cliente = st.checkbox("Quiero recibir una copia de este brief en mi correo",
-        key=f"copia_cliente_{_gen}")
+    st.caption(
+        "Al enviar el brief, el mismo material se compartirá automáticamente con "
+        "el equipo de Diseño, el correo principal, el correo adicional (si se capturó) "
+        "y el asesor registrado."
+    )
     acepto = st.checkbox(
         "Confirmo que la información y archivos proporcionados son correctos y autorizo a "
         "Círculo Tequila a utilizarlos para desarrollar el diseño solicitado. *",
@@ -1187,9 +1261,17 @@ for etiqueta, valor in campos_requeridos.items():
         errores.append(f"• {etiqueta}")
 
 if not correo.strip():
-    errores.append("• Correo")
+    errores.append("• Correo principal")
 elif not es_correo_valido(correo):
-    errores.append("• Correo (formato no válido)")
+    errores.append("• Correo principal (formato no válido)")
+
+if correo_adicional.strip() and not es_correo_valido(correo_adicional):
+    errores.append("• Correo adicional (formato no válido)")
+
+if not asesor_sel:
+    errores.append("• Asesor que te atendió")
+elif asesor_sel == ASESOR_OTRO and not asesor_otro.strip():
+    errores.append("• Nombre de la persona que te atendió")
 
 if not presentacion_375 and not presentacion_750:
     errores.append("• Selecciona al menos una presentación: 375 ml o 750 ml")
@@ -1227,6 +1309,9 @@ if st.button(
         "lider_puesto": lider_puesto.strip(),
         "celular": celular.strip(),
         "correo": correo.strip(),
+        "correo_adicional": correo_adicional.strip(),
+        "asesor_nombre": asesor_nombre.strip(),
+        "asesor_correo": asesor_correo.strip(),
         "presentacion_375": bool(presentacion_375),
         "presentacion_750": bool(presentacion_750),
         "objetivo_diseno": objetivo_diseno.strip(),
@@ -1264,7 +1349,7 @@ if st.button(
 
     try:
         with st.spinner(
-            "Generando el PDF, preparando los archivos y enviándolos a Marketing..."
+            "Generando el PDF, preparando los archivos y enviándolos al equipo de Diseño..."
         ):
             pdf_bytes = build_brief_pdf(
                 datos,
@@ -1279,7 +1364,6 @@ if st.button(
                 datos,
                 zip_bytes,
                 zip_name,
-                copia_cliente,
             )
     except Exception as error:
         st.error(
