@@ -1,4 +1,3 @@
-
 import io
 import zipfile
 import smtplib
@@ -30,7 +29,6 @@ from PIL import Image as PILImage, ImageOps
 
 
 # =========================================================
-# PROPUESTA MKT — Características del diseño en un solo campo abierto
 # Config + Branding (mismo estilo que Solicitud de Producción)
 # =========================================================
 PRIMARY = "#252525"
@@ -826,23 +824,20 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(section_band("CARACTERÍSTICAS DEL DISEÑO", "diseno"))
     story.append(Spacer(1, 0.12 * cm))
 
-    story.append(
-        texto_bloque_visual(
-            "diseno",
-            "#252525",
-            "Describe cómo imaginas tu diseño",
-            datos["caracteristicas_diseno"],
-        )
-    )
-    story.append(Spacer(1, 0.09 * cm))
-    story.append(
-        texto_bloque_visual(
-            "notas",
-            "#76538F",
-            "Notas / comentarios",
-            datos["informacion_adicional"],
-        )
-    )
+    bloques = [
+        ("idea", "#D39A18", "Cuéntanos tu idea - ¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]),
+        ("personas", "#6F4A8E", "¿Para quién es este diseño?", datos["para_quien"]),
+        ("sensacion", "#E39A38", "¿Cómo quieres que se sienta?", datos["sensacion_diseno"]),
+        ("elementos", "#59A862", "¿Qué no puede faltar?", datos["elementos_graficos"]),
+        ("colores", "#C95B63", "¿Hay colores que te gustaría usar o evitar?", datos["paleta_colores"]),
+        ("inspiracion", "#3E87A8", "¿Hay algo que te inspire?", datos["inspiracion"]),
+        ("notas", "#76538F", "Notas / comentarios", datos["informacion_adicional"]),
+    ]
+
+    for idx, (tipo, color_icono, titulo, contenido) in enumerate(bloques):
+        story.append(texto_bloque_visual(tipo, color_icono, titulo, contenido))
+        if idx < len(bloques) - 1:
+            story.append(Spacer(1, 0.09 * cm))
 
     for titulo, archivos in adjuntos_por_seccion.items():
         story.extend(imagenes_seccion(titulo, archivos))
@@ -1316,30 +1311,75 @@ with st.container(border=True):
 
 
 # =========================================================
-# Características del diseño — PROPUESTA MKT
+# Características del diseño
 # =========================================================
 section_header("🎨 Características del diseño")
 
 st.markdown(
     """
     <div class="intro-card" style="margin-bottom:0.8rem;">
-        Cuéntanos libremente cómo imaginas tu diseño. Comparte toda la información
-        que consideres importante para que nuestro equipo pueda entender tu idea.
+        <b>No necesitas saber de diseño.</b> Cuéntanos tu idea como la imaginas y
+        nosotros nos encargamos de traducirla visualmente.
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 with st.container(border=True):
-    caracteristicas_diseno = st.text_area(
-        "Describe cómo imaginas tu diseño *",
+    st.markdown("#### 💡 Cuéntanos tu idea")
+
+    objetivo_diseno = st.text_area(
+        "¿Qué quieres comunicar y lograr con este diseño? *",
+        placeholder="Cuéntanos con tus propias palabras qué representa el proyecto y qué te gustaría transmitir.",
+        height=120,
+        key=f"objetivo_diseno_{_gen}"
+    )
+
+    st.markdown("#### 👥 ¿Para quién es este diseño?")
+
+    para_quien = st.text_area(
+        "Cuéntanos quién recibirá o disfrutará este diseño. *",
+        placeholder="Clientes · Colaboradores · Invitados · Evento social · Regalo · Conmemoración · Uso personal · Otro",
+        height=80,
+        key=f"para_quien_{_gen}"
+    )
+
+    st.markdown("#### ✨ ¿Cómo quieres que se sienta?")
+
+    sensacion_diseno = st.text_area(
+        "Describe la personalidad o sensación que tienes en mente. *",
+        placeholder="Elegante · Alegre · Mexicano · Moderno · Premium · Artístico · Minimalista · Corporativo · Romántico · Colorido · Sobrio · Tradicional · Atrevido · Nostálgico · Otro",
+        height=90,
+        key=f"sensacion_diseno_{_gen}"
+    )
+
+    st.markdown("#### 🧩 ¿Qué no puede faltar?")
+
+    elementos_graficos = st.text_area(
+        "Cuéntanos qué elementos deben aparecer sí o sí en el diseño. *",
         placeholder=(
-            "Escribe aquí todo lo que consideres importante sobre tu idea, "
-            "concepto, estilo, colores, elementos, referencias, mensajes o "
-            "cualquier detalle que quieras que tomemos en cuenta."
+            "Nombres, fechas, frases, lugares, símbolos, productos, imágenes, "
+            "identidad gráfica u otros elementos importantes."
         ),
-        height=280,
-        key=f"caracteristicas_diseno_{_gen}"
+        height=120,
+        key=f"elementos_graficos_{_gen}"
+    )
+
+    st.markdown("#### 🎨 ¿Hay colores que te gustaría usar o evitar?")
+
+    paleta_colores = st.text_input(
+        "Colores",
+        placeholder="Opcional",
+        key=f"paleta_colores_{_gen}"
+    )
+
+    st.markdown("#### 🔎 ¿Hay algo que te inspire?")
+
+    inspiracion = st.text_area(
+        "Referencias o inspiración",
+        placeholder="Opcional",
+        height=90,
+        key=f"inspiracion_{_gen}"
     )
 
     st.markdown("#### 📎 Adjunta tus archivos *")
@@ -1461,7 +1501,10 @@ campos_requeridos = {
     "Nombre del proyecto": nombre_proyecto,
     "Contacto responsable del proyecto": lider_nombre,
     "Celular": celular,
-    "Características del diseño": caracteristicas_diseno,
+    "¿Qué quieres comunicar y lograr con este diseño?": objetivo_diseno,
+    "¿Para quién es este diseño?": para_quien,
+    "¿Cómo quieres que se sienta?": sensacion_diseno,
+    "¿Qué no puede faltar?": elementos_graficos,
 }
 for etiqueta, valor in campos_requeridos.items():
     if not valor.strip():
@@ -1521,7 +1564,12 @@ if st.button(
         "asesor_correo": asesor_correo.strip(),
         "presentacion_375": bool(presentacion_375),
         "presentacion_750": bool(presentacion_750),
-        "caracteristicas_diseno": caracteristicas_diseno.strip(),
+        "objetivo_diseno": objetivo_diseno.strip(),
+        "para_quien": para_quien.strip(),
+        "sensacion_diseno": sensacion_diseno.strip(),
+        "elementos_graficos": elementos_graficos.strip(),
+        "paleta_colores": paleta_colores.strip(),
+        "inspiracion": inspiracion.strip(),
         "informacion_adicional": informacion_adicional.strip(),
     }
 
