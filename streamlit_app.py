@@ -317,7 +317,11 @@ def reiniciar_formulario():
 # =========================================================
 solapa_path = get_solapa_path()
 if solapa_path:
-    st.image(str(solapa_path), use_container_width=True)
+    # Solapa centrada al 75% aprox. del ancho disponible.
+    # Las columnas laterales funcionan como márgenes visuales.
+    col_solapa_izq, col_solapa_centro, col_solapa_der = st.columns([1, 6, 1])
+    with col_solapa_centro:
+        st.image(str(solapa_path), use_container_width=True)
 
 st.markdown(
     """
