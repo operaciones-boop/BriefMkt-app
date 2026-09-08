@@ -24,6 +24,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfgen import canvas
+from reportlab.graphics.shapes import Drawing, Circle, Rect, Line, Polygon
 from PIL import Image as PILImage, ImageOps
 
 
@@ -395,26 +396,87 @@ def _P(txt, style):
 
 
 def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
+    """
+    Genera un PDF compacto y visual:
+    - solapa corporativa reducida y centrada;
+    - secciones con iconografía vectorial compatible con ReportLab;
+    - características del diseño en bloques amigables;
+    - material de referencia en miniaturas de dos columnas.
+    """
     styles = getSampleStyleSheet()
     normal = styles["Normal"]
 
-    title_style = ParagraphStyle("title_style", parent=styles["Title"],
-        fontName="Helvetica-Bold", fontSize=18, textColor=colors.white,
-        alignment=TA_CENTER, spaceAfter=0, leading=22)
-    subtitle_style = ParagraphStyle("subtitle_style", parent=normal,
-        fontName="Helvetica", fontSize=8.5, textColor=colors.white,
-        alignment=TA_CENTER, leading=10)
-    sec_style = ParagraphStyle("sec_style", parent=styles["Heading2"],
-        fontName="Helvetica-Bold", fontSize=11, textColor=colors.white,
-        spaceBefore=0, spaceAfter=0, leading=14, alignment=TA_LEFT)
-    label_style = ParagraphStyle("label_style", parent=normal,
-        fontName="Helvetica", fontSize=9, textColor=PDF_TEXT, leading=12)
-    value_style = ParagraphStyle("value_style", parent=normal,
-        fontName="Helvetica-Bold", fontSize=9.5, textColor=PDF_RED_DARK, leading=12)
-    body_style = ParagraphStyle("body_style", parent=normal,
-        fontName="Helvetica", fontSize=9.3, textColor=PDF_TEXT, leading=13)
-    img_caption_style = ParagraphStyle("img_caption_style", parent=normal,
-        fontName="Helvetica-Bold", fontSize=9, textColor=colors.white, leading=11)
+    title_style = ParagraphStyle(
+        "title_style",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=16,
+        textColor=colors.white,
+        alignment=TA_CENTER,
+        spaceAfter=0,
+        leading=19,
+    )
+    subtitle_style = ParagraphStyle(
+        "subtitle_style",
+        parent=normal,
+        fontName="Helvetica",
+        fontSize=8.5,
+        textColor=colors.white,
+        alignment=TA_CENTER,
+        leading=10,
+    )
+    sec_style = ParagraphStyle(
+        "sec_style",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=10.5,
+        textColor=colors.white,
+        spaceBefore=0,
+        spaceAfter=0,
+        leading=13,
+        alignment=TA_LEFT,
+    )
+    label_style = ParagraphStyle(
+        "label_style",
+        parent=normal,
+        fontName="Helvetica",
+        fontSize=8.6,
+        textColor=PDF_TEXT,
+        leading=11,
+    )
+    value_style = ParagraphStyle(
+        "value_style",
+        parent=normal,
+        fontName="Helvetica-Bold",
+        fontSize=9.1,
+        textColor=PDF_RED_DARK,
+        leading=11,
+    )
+    body_style = ParagraphStyle(
+        "body_style",
+        parent=normal,
+        fontName="Helvetica",
+        fontSize=9,
+        textColor=PDF_TEXT,
+        leading=12.2,
+    )
+    small_style = ParagraphStyle(
+        "small_style",
+        parent=normal,
+        fontName="Helvetica",
+        fontSize=7.6,
+        textColor=PDF_MUTED,
+        leading=9,
+        alignment=TA_CENTER,
+    )
+    file_list_style = ParagraphStyle(
+        "file_list_style",
+        parent=normal,
+        fontName="Helvetica",
+        fontSize=8.2,
+        textColor=PDF_TEXT,
+        leading=11,
+    )
 
     def L(txt):
         return Paragraph(str(txt), label_style)
@@ -425,36 +487,124 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
             value_style,
         )
 
+    def icono_pdf(tipo: str, color="#FFFFFF", size=17):
+        """Pequeños pictogramas vectoriales; no dependen de emojis ni fuentes externas."""
+        c = colors.HexColor(color)
+        d = Drawing(size, size)
+        s = size / 18.0
+
+        def X(v):
+            return v * s
+
+        if tipo == "idea":
+            d.add(Circle(X(9), X(10.5), X(4.4), strokeColor=c, fillColor=None, strokeWidth=X(1.5)))
+            d.add(Line(X(7), X(5.3), X(11), X(5.3), strokeColor=c, strokeWidth=X(1.5)))
+            d.add(Line(X(7.5), X(3.5), X(10.5), X(3.5), strokeColor=c, strokeWidth=X(1.5)))
+            d.add(Line(X(9), X(15.8), X(9), X(18), strokeColor=c, strokeWidth=X(1.2)))
+        elif tipo == "personas":
+            d.add(Circle(X(6), X(12.2), X(2.3), strokeColor=c, fillColor=None, strokeWidth=X(1.4)))
+            d.add(Circle(X(12), X(12.2), X(2.3), strokeColor=c, fillColor=None, strokeWidth=X(1.4)))
+            d.add(Line(X(2.8), X(4.5), X(9), X(4.5), strokeColor=c, strokeWidth=X(1.5)))
+            d.add(Line(X(9), X(4.5), X(15.2), X(4.5), strokeColor=c, strokeWidth=X(1.5)))
+            d.add(Line(X(4.1), X(8.2), X(7.9), X(8.2), strokeColor=c, strokeWidth=X(1.3)))
+            d.add(Line(X(10.1), X(8.2), X(13.9), X(8.2), strokeColor=c, strokeWidth=X(1.3)))
+        elif tipo == "sensacion":
+            pts = [
+                X(9), X(17), X(10.6), X(11.3), X(16), X(9),
+                X(10.6), X(6.7), X(9), X(1), X(7.4), X(6.7),
+                X(2), X(9), X(7.4), X(11.3),
+            ]
+            d.add(Polygon(pts, strokeColor=c, fillColor=None, strokeWidth=X(1.4)))
+        elif tipo == "elementos":
+            d.add(Line(X(9), X(2), X(9), X(16), strokeColor=c, strokeWidth=X(2.2)))
+            d.add(Line(X(2), X(9), X(16), X(9), strokeColor=c, strokeWidth=X(2.2)))
+            d.add(Circle(X(9), X(9), X(6.5), strokeColor=c, fillColor=None, strokeWidth=X(1.1)))
+        elif tipo == "colores":
+            d.add(Circle(X(6), X(11), X(3.0), strokeColor=c, fillColor=None, strokeWidth=X(1.2)))
+            d.add(Circle(X(11.8), X(11), X(3.0), strokeColor=c, fillColor=None, strokeWidth=X(1.2)))
+            d.add(Circle(X(9), X(6), X(3.0), strokeColor=c, fillColor=None, strokeWidth=X(1.2)))
+        elif tipo == "inspiracion":
+            d.add(Circle(X(7.5), X(10.5), X(4.8), strokeColor=c, fillColor=None, strokeWidth=X(1.5)))
+            d.add(Line(X(11), X(6.8), X(16), X(2), strokeColor=c, strokeWidth=X(1.8)))
+        elif tipo == "notas":
+            d.add(Rect(X(4), X(2), X(10), X(14), strokeColor=c, fillColor=None, strokeWidth=X(1.3)))
+            d.add(Line(X(6), X(12), X(12), X(12), strokeColor=c, strokeWidth=X(1.0)))
+            d.add(Line(X(6), X(9), X(12), X(9), strokeColor=c, strokeWidth=X(1.0)))
+            d.add(Line(X(6), X(6), X(10.5), X(6), strokeColor=c, strokeWidth=X(1.0)))
+        elif tipo == "datos":
+            d.add(Rect(X(3), X(2), X(12), X(14), strokeColor=c, fillColor=None, strokeWidth=X(1.3)))
+            for xx in (X(6), X(10.5)):
+                for yy in (X(6), X(10.5)):
+                    d.add(Rect(xx, yy, X(1.6), X(1.6), strokeColor=c, fillColor=None, strokeWidth=X(0.9)))
+        elif tipo == "producto":
+            d.add(Rect(X(6), X(4), X(6), X(9), strokeColor=c, fillColor=None, strokeWidth=X(1.3)))
+            d.add(Rect(X(7.3), X(13), X(3.4), X(3), strokeColor=c, fillColor=None, strokeWidth=X(1.2)))
+            d.add(Line(X(6), X(6.2), X(12), X(6.2), strokeColor=c, strokeWidth=X(0.9)))
+        elif tipo == "diseno":
+            pts = [X(9), X(16), X(11), X(11), X(16), X(9), X(11), X(7), X(9), X(2), X(7), X(7), X(2), X(9), X(7), X(11)]
+            d.add(Polygon(pts, strokeColor=c, fillColor=None, strokeWidth=X(1.4)))
+        elif tipo == "adjuntos":
+            d.add(Rect(X(4), X(3), X(9), X(12), strokeColor=c, fillColor=None, strokeWidth=X(1.2)))
+            d.add(Line(X(7), X(12), X(11), X(12), strokeColor=c, strokeWidth=X(1.0)))
+            d.add(Line(X(7), X(9), X(11), X(9), strokeColor=c, strokeWidth=X(1.0)))
+            d.add(Line(X(7), X(6), X(10), X(6), strokeColor=c, strokeWidth=X(1.0)))
+        else:
+            d.add(Circle(X(9), X(9), X(5.5), strokeColor=c, fillColor=None, strokeWidth=X(1.4)))
+
+        return d
+
     def title_banner():
-        t = Table([[Paragraph("BRIEF DE DISEÑO", title_style)],
-                   [Paragraph("Edición Personalizada · Círculo Tequila", subtitle_style)]],
-                  colWidths=[18.4 * cm])
+        t = Table(
+            [
+                [Paragraph("BRIEF DE DISEÑO", title_style)],
+                [Paragraph("Edición Personalizada · Círculo Tequila", subtitle_style)],
+            ],
+            colWidths=[18.4 * cm],
+        )
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), PDF_RED),
-            ("TOPPADDING", (0, 0), (-1, 0), 12), ("BOTTOMPADDING", (0, 0), (-1, 0), 0),
-            ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
-            ("LEFTPADDING", (0, 0), (-1, -1), 14), ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+            ("TOPPADDING", (0, 0), (-1, 0), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 0),
+            ("TOPPADDING", (0, 1), (-1, 1), 0),
+            ("BOTTOMPADDING", (0, 1), (-1, 1), 7),
+            ("LEFTPADDING", (0, 0), (-1, -1), 14),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 14),
         ]))
         return t
 
-    def section_band(text):
-        t = Table([[Paragraph(text, sec_style)]], colWidths=[18.4 * cm])
+    def section_band(text, tipo="diseno"):
+        t = Table(
+            [[icono_pdf(tipo, "#FFFFFF", 15), Paragraph(text, sec_style)]],
+            colWidths=[0.65 * cm, 17.75 * cm],
+        )
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), PDF_RED),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (0, 0), (0, 0), "CENTER"),
+            ("LEFTPADDING", (0, 0), (0, 0), 5),
+            ("RIGHTPADDING", (0, 0), (0, 0), 1),
+            ("LEFTPADDING", (1, 0), (1, 0), 4),
+            ("RIGHTPADDING", (1, 0), (1, 0), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ]))
         return t
 
     def kv4_table(rows_4col, colWidths=(3.4 * cm, 5.8 * cm, 3.4 * cm, 5.8 * cm)):
         t = Table(rows_4col, colWidths=list(colWidths))
-        s = [("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-             ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_GREY_BORDER),
-             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-             ("FONTNAME", (0, 0), (-1, -1), "Helvetica"), ("FONTSIZE", (0, 0), (-1, -1), 9),
-             ("BACKGROUND", (0, 0), (0, -1), PDF_LIGHT_BG), ("BACKGROUND", (2, 0), (2, -1), PDF_LIGHT_BG),
-             ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-             ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]
+        s = [
+            ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
+            ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_GREY_BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BACKGROUND", (0, 0), (0, -1), PDF_LIGHT_BG),
+            ("BACKGROUND", (2, 0), (2, -1), PDF_LIGHT_BG),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]
         for i in range(len(rows_4col)):
             if i % 2 == 1:
                 s.append(("BACKGROUND", (1, i), (1, i), PDF_GREY_ROW))
@@ -462,19 +612,70 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         t.setStyle(TableStyle(s))
         return t
 
-    def texto_bloque(titulo, contenido):
-        box = Table([[Paragraph(f"<b>{titulo}</b>", label_style)], [_P(contenido, body_style)]],
-                     colWidths=[18.4 * cm])
+    def texto_bloque_visual(tipo, color_icono, titulo, contenido):
+        contenido_p = Paragraph(texto_pdf_seguro(contenido), body_style)
+        titulo_p = Paragraph(f"<b>{texto_pdf_seguro(titulo)}</b>", label_style)
+        box = Table(
+            [
+                [icono_pdf(tipo, color_icono, 16), titulo_p],
+                ["", contenido_p],
+            ],
+            colWidths=[0.78 * cm, 17.62 * cm],
+        )
         box.setStyle(TableStyle([
             ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
             ("BACKGROUND", (0, 0), (-1, 0), PDF_LIGHT_BG),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("SPAN", (0, 0), (0, 1)),
+            ("VALIGN", (0, 0), (0, 1), "MIDDLE"),
+            ("ALIGN", (0, 0), (0, 1), "CENTER"),
+            ("LEFTPADDING", (0, 0), (0, 1), 6),
+            ("RIGHTPADDING", (0, 0), (0, 1), 2),
+            ("LEFTPADDING", (1, 0), (1, -1), 7),
+            ("RIGHTPADDING", (1, 0), (1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, 0), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+            ("TOPPADDING", (0, 1), (-1, 1), 4),
+            ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
         ]))
         return box
 
+    def preview_cell(archivo):
+        preview = preparar_imagen_para_pdf(archivo["bytes"])
+        rl_img = RLImage(io.BytesIO(preview))
+        ratio = rl_img.imageWidth / rl_img.imageHeight
+
+        max_w, max_h = 7.4 * cm, 4.8 * cm
+        if ratio > (max_w / max_h):
+            rl_img.drawWidth = max_w
+            rl_img.drawHeight = max_w / ratio
+        else:
+            rl_img.drawHeight = max_h
+            rl_img.drawWidth = max_h * ratio
+
+        nombre_img = texto_pdf_seguro(archivo["nombre"])
+        cell = Table(
+            [[rl_img], [Paragraph(nombre_img, small_style)]],
+            colWidths=[8.45 * cm],
+        )
+        cell.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOX", (0, 0), (-1, -1), 0.45, PDF_GREY_BORDER),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+            ("TOPPADDING", (0, 0), (-1, 0), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 1), (-1, 1), 3),
+            ("BOTTOMPADDING", (0, 1), (-1, 1), 5),
+        ]))
+        return cell
+
     def imagenes_seccion(titulo, archivos):
-        """Agrega vistas previas de imágenes al PDF y lista los demás archivos."""
+        """
+        Presenta el material de referencia como miniaturas compactas.
+        Los originales siguen incluidos completos dentro del ZIP.
+        """
         imgs = [a for a in archivos if es_imagen(a["nombre"])]
         no_imgs = [a for a in archivos if not es_imagen(a["nombre"])]
         flowables = []
@@ -482,99 +683,123 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         if not archivos:
             return flowables
 
-        cap_tbl = Table(
-            [[Paragraph(
-                f"ADJUNTOS — {texto_pdf_seguro(titulo)} ({len(archivos)})",
-                img_caption_style,
-            )]],
-            colWidths=[18.4 * cm],
-        )
-        cap_tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PDF_RED_DARK),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
-        flowables.append(Spacer(1, 0.15 * cm))
-        flowables.append(cap_tbl)
+        flowables.append(Spacer(1, 0.16 * cm))
+        flowables.append(section_band(
+            f"MATERIAL DE REFERENCIA ({len(archivos)} archivo{'s' if len(archivos) != 1 else ''})",
+            "adjuntos",
+        ))
+        flowables.append(Spacer(1, 0.12 * cm))
 
-        max_w, max_h = 16.0 * cm, 9.0 * cm
-
+        celdas = []
         for archivo in imgs:
             try:
-                preview = preparar_imagen_para_pdf(archivo["bytes"])
-                rl_img = RLImage(io.BytesIO(preview))
-                ratio = rl_img.imageWidth / rl_img.imageHeight
-
-                if ratio > (max_w / max_h):
-                    rl_img.drawWidth = max_w
-                    rl_img.drawHeight = max_w / ratio
-                else:
-                    rl_img.drawHeight = max_h
-                    rl_img.drawWidth = max_h * ratio
-
-                nombre_img = texto_pdf_seguro(archivo["nombre"])
-                img_wrap = Table(
-                    [[rl_img], [Paragraph(nombre_img, label_style)]],
-                    colWidths=[18.4 * cm],
-                )
-                img_wrap.setStyle(TableStyle([
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
-                    ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
-                ]))
-                flowables.append(img_wrap)
-                flowables.append(Spacer(1, 0.10 * cm))
+                celdas.append(preview_cell(archivo))
             except Exception:
                 no_imgs.append(archivo)
 
-        if no_imgs:
-            nombres = texto_pdf_seguro(
-                ", ".join(a["nombre"] for a in no_imgs)
-            )
-            flowables.append(Paragraph(
-                f"<i>Otros archivos incluidos en el paquete ZIP: {nombres}</i>",
-                body_style,
-            ))
-            flowables.append(Spacer(1, 0.1 * cm))
+        if celdas:
+            rows = []
+            span_last = False
+            for i in range(0, len(celdas), 2):
+                if i + 1 < len(celdas):
+                    rows.append([celdas[i], celdas[i + 1]])
+                else:
+                    rows.append([celdas[i], ""])
+                    span_last = True
 
-        flowables.append(Spacer(1, 0.1 * cm))
+            grid = Table(rows, colWidths=[9.2 * cm, 9.2 * cm], hAlign="CENTER")
+            grid_style = [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]
+            if span_last:
+                last_row = len(rows) - 1
+                grid_style.extend([
+                    ("SPAN", (0, last_row), (1, last_row)),
+                    ("ALIGN", (0, last_row), (1, last_row), "CENTER"),
+                ])
+            grid.setStyle(TableStyle(grid_style))
+            flowables.append(grid)
+
+        if no_imgs:
+            nombres = "<br/>".join(
+                f"- {texto_pdf_seguro(a['nombre'])}" for a in no_imgs
+            )
+            otros = Table(
+                [[Paragraph("<b>Otros archivos incluidos en el ZIP</b>", label_style)],
+                 [Paragraph(nombres, file_list_style)]],
+                colWidths=[18.4 * cm],
+            )
+            otros.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
+                ("BACKGROUND", (0, 0), (-1, 0), PDF_LIGHT_BG),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]))
+            flowables.append(Spacer(1, 0.10 * cm))
+            flowables.append(otros)
+
+        flowables.append(Spacer(1, 0.12 * cm))
         return flowables
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        leftMargin=1.3 * cm, rightMargin=1.3 * cm, topMargin=1.0 * cm, bottomMargin=2.0 * cm)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=1.3 * cm,
+        rightMargin=1.3 * cm,
+        topMargin=0.8 * cm,
+        bottomMargin=2.0 * cm,
+    )
     story = []
 
+    # Solapa compacta para A4: se conserva la imagen completa, sin estirarla.
     if solapa_path and solapa_path.exists():
-        max_width = 18.5 * cm
         img = RLImage(str(solapa_path))
-        img.drawWidth = max_width
-        img.drawHeight = img.imageHeight * max_width / img.imageWidth
+        max_w = 12.8 * cm
+        max_h = 3.0 * cm
+        ratio = img.imageWidth / img.imageHeight
+
+        if ratio > (max_w / max_h):
+            img.drawWidth = max_w
+            img.drawHeight = max_w / ratio
+        else:
+            img.drawHeight = max_h
+            img.drawWidth = max_h * ratio
+
+        img.hAlign = "CENTER"
         story.append(img)
-        story.append(Spacer(1, 0.18 * cm))
+        story.append(Spacer(1, 0.12 * cm))
 
     story.append(title_banner())
-    story.append(Spacer(1, 0.30 * cm))
+    story.append(Spacer(1, 0.22 * cm))
 
     fecha_box = Table([[
-        Paragraph("FECHA<br/><font size=7 color='#666'>de envío</font>", label_style),
-        Paragraph(f"<font size=11><b>{texto_pdf_seguro(datos['fecha'])}</b></font>", label_style),
-    ]], colWidths=[3.0 * cm, 15.4 * cm])
+        Paragraph("<b>FECHA DE ENVÍO</b>", label_style),
+        Paragraph(
+            f"<font size=10><b>{texto_pdf_seguro(datos['fecha'])}</b></font>",
+            label_style,
+        ),
+    ]], colWidths=[3.3 * cm, 15.1 * cm])
     fecha_box.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.6, PDF_RED), ("BACKGROUND", (0, 0), (0, 0), PDF_LIGHT_BG),
+        ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
+        ("BACKGROUND", (0, 0), (0, 0), PDF_LIGHT_BG),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-        ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(fecha_box)
-    story.append(Spacer(1, 0.30 * cm))
+    story.append(Spacer(1, 0.24 * cm))
 
-    story.append(section_band("DATOS CLIENTE / EMPRESA"))
-    story.append(Spacer(1, 0.15 * cm))
+    story.append(section_band("DATOS CLIENTE / EMPRESA", "datos"))
+    story.append(Spacer(1, 0.12 * cm))
     story.append(kv4_table([
         [L("Proyecto"), V(datos["nombre_proyecto"]), L("Contacto responsable"), V(datos["lider_nombre"])],
         [L("Celular"), V(datos["celular"]), L("Correo principal"), V(datos["correo"])],
@@ -583,9 +808,9 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         [L("Página web"), V(datos["pagina_web"]), L("Redes sociales"), V(datos["redes_sociales"])],
     ]))
 
-    story.append(Spacer(1, 0.30 * cm))
-    story.append(section_band("PRESENTACIÓN DEL PRODUCTO"))
-    story.append(Spacer(1, 0.15 * cm))
+    story.append(Spacer(1, 0.24 * cm))
+    story.append(section_band("PRESENTACIÓN DEL PRODUCTO", "producto"))
+    story.append(Spacer(1, 0.12 * cm))
     story.append(kv4_table([
         [
             L("375 ml"),
@@ -595,46 +820,63 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         ],
     ]))
 
-    story.append(Spacer(1, 0.30 * cm))
-    story.append(section_band("CARACTERÍSTICAS DEL DISEÑO"))
-    story.append(Spacer(1, 0.15 * cm))
-    story.append(texto_bloque("¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]))
+    story.append(Spacer(1, 0.24 * cm))
+    story.append(section_band("CARACTERÍSTICAS DEL DISEÑO", "diseno"))
     story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("¿Para quién es este diseño?", datos["para_quien"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("¿Cómo quieres que se sienta?", datos["sensacion_diseno"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("¿Qué no puede faltar?", datos["elementos_graficos"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Colores que le gustaría usar o evitar", datos["paleta_colores"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Referencias / inspiración", datos["inspiracion"]))
-    story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Notas / comentarios", datos["informacion_adicional"]))
+
+    bloques = [
+        ("idea", "#D39A18", "Cuéntanos tu idea - ¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]),
+        ("personas", "#6F4A8E", "¿Para quién es este diseño?", datos["para_quien"]),
+        ("sensacion", "#E39A38", "¿Cómo quieres que se sienta?", datos["sensacion_diseno"]),
+        ("elementos", "#59A862", "¿Qué no puede faltar?", datos["elementos_graficos"]),
+        ("colores", "#C95B63", "¿Hay colores que te gustaría usar o evitar?", datos["paleta_colores"]),
+        ("inspiracion", "#3E87A8", "¿Hay algo que te inspire?", datos["inspiracion"]),
+        ("notas", "#76538F", "Notas / comentarios", datos["informacion_adicional"]),
+    ]
+
+    for idx, (tipo, color_icono, titulo, contenido) in enumerate(bloques):
+        story.append(texto_bloque_visual(tipo, color_icono, titulo, contenido))
+        if idx < len(bloques) - 1:
+            story.append(Spacer(1, 0.09 * cm))
 
     for titulo, archivos in adjuntos_por_seccion.items():
         story.extend(imagenes_seccion(titulo, archivos))
 
-    story.append(Spacer(1, 0.3 * cm))
+    story.append(Spacer(1, 0.16 * cm))
 
     lider_pdf = texto_pdf_seguro(datos["lider_nombre"])
     correo_pdf = texto_pdf_seguro(datos["correo"])
     fecha_pdf = texto_pdf_seguro(datos["fecha"])
 
-    aceptacion = Table([[Paragraph(
-        f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
-        f"({correo_pdf}) el {fecha_pdf}. La información y los archivos adjuntos "
-        f"se proporcionan para el desarrollo del diseño solicitado.</i>",
-        body_style)]], colWidths=[18.4 * cm])
+    aceptacion = Table(
+        [[Paragraph(
+            f"<i>Brief confirmado digitalmente por <b>{lider_pdf}</b> "
+            f"({correo_pdf}) el {fecha_pdf}. La información y los archivos adjuntos "
+            f"se proporcionan para el desarrollo del diseño solicitado.</i>",
+            body_style,
+        )]],
+        colWidths=[18.4 * cm],
+    )
     aceptacion.setStyle(TableStyle([
-        ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER), ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("BOX", (0, 0), (-1, -1), 0.5, PDF_GREY_BORDER),
+        ("BACKGROUND", (0, 0), (-1, -1), PDF_LIGHT_BG),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
     ]))
     story.append(aceptacion)
 
-    doc.build(story, canvasmaker=lambda *args, **kwargs: NumberedCanvas(
-        *args, proyecto=datos["nombre_proyecto"], empresa=datos["nombre_empresa"], **kwargs))
+    doc.build(
+        story,
+        canvasmaker=lambda *args, **kwargs: NumberedCanvas(
+            *args,
+            proyecto=datos["nombre_proyecto"],
+            empresa=datos["nombre_empresa"],
+            **kwargs,
+        ),
+    )
+
     pdf = buffer.getvalue()
     buffer.close()
     return pdf
@@ -755,8 +997,8 @@ def enviar_correo(
             vistos.add(clave)
 
     msg = EmailMessage()
-    empresa_asunto = f"{datos['nombre_empresa']} — " if datos["nombre_empresa"] else ""
-    msg["Subject"] = f"Brief de Diseño · {empresa_asunto}{datos['nombre_proyecto']}"
+    empresa_asunto = f"{datos['nombre_empresa']} · " if datos["nombre_empresa"] else ""
+    msg["Subject"] = f"Brief de Diseño | {empresa_asunto}{datos['nombre_proyecto']}"
     msg["From"] = f"{cfg['from_name']} <{cfg['user']}>"
     msg["To"] = ", ".join(destinatarios_diseno)
     msg["Reply-To"] = datos["correo"]
@@ -766,7 +1008,9 @@ def enviar_correo(
     correo_adicional_txt = datos["correo_adicional"] or "No especificado"
     asesor_txt = datos["asesor_nombre"] or "No especificado"
 
-    cuerpo = f"""Se recibió un nuevo Brief de Diseño (Edición Personalizada).
+    cuerpo = f"""¡Gracias por compartir este proyecto con Círculo Tequila!
+
+La información y los archivos del brief fueron enviados correctamente y ya están disponibles para su revisión.
 
 Proyecto: {datos['nombre_proyecto']}
 Contacto responsable: {datos['lider_nombre']}{puesto_txt}
@@ -774,13 +1018,15 @@ Celular: {datos['celular']}
 Correo principal: {datos['correo']}
 Correo adicional: {correo_adicional_txt}
 Empresa: {empresa_txt}
-Asesor que atendió al cliente: {asesor_txt}
+Asesor: {asesor_txt}
 
-El archivo ZIP adjunto contiene el brief completo en PDF y todos los archivos originales proporcionados por el cliente.
+En el archivo ZIP adjunto encontrarás el Brief de Diseño en PDF, junto con el material de referencia proporcionado para el desarrollo del proyecto.
 
-Este mismo material fue enviado al equipo de Diseño, al cliente y al asesor registrado cuando corresponde.
+Este material será la base para que nuestro equipo de Diseño conozca la idea, las referencias y los elementos importantes del proyecto.
 
-Este correo se generó automáticamente desde el formulario del brief."""
+Gracias por confiar en Círculo Tequila para crear una edición especial.
+
+Este correo fue generado automáticamente desde nuestro Brief de Diseño."""
     msg.set_content(cuerpo)
     msg.add_attachment(
         zip_bytes,
