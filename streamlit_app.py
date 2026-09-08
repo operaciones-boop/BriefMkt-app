@@ -577,9 +577,15 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.15 * cm))
     story.append(texto_bloque("¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]))
     story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Colores sugeridos", datos["paleta_colores"]))
+    story.append(texto_bloque("¿Para quién es este diseño?", datos["para_quien"]))
     story.append(Spacer(1, 0.12 * cm))
-    story.append(texto_bloque("Elementos gráficos relevantes a incluir", datos["elementos_graficos"]))
+    story.append(texto_bloque("¿Cómo quieres que se sienta?", datos["sensacion_diseno"]))
+    story.append(Spacer(1, 0.12 * cm))
+    story.append(texto_bloque("¿Qué no puede faltar?", datos["elementos_graficos"]))
+    story.append(Spacer(1, 0.12 * cm))
+    story.append(texto_bloque("Colores que le gustaría usar o evitar", datos["paleta_colores"]))
+    story.append(Spacer(1, 0.12 * cm))
+    story.append(texto_bloque("Referencias / inspiración", datos["inspiracion"]))
     story.append(Spacer(1, 0.12 * cm))
     story.append(texto_bloque("Notas / comentarios", datos["informacion_adicional"]))
 
@@ -988,38 +994,79 @@ with st.container(border=True):
 # =========================================================
 section_header("🎨 Características del diseño")
 
+st.markdown(
+    """
+    <div class="intro-card" style="margin-bottom:0.8rem;">
+        <b>No necesitas saber de diseño.</b> Cuéntanos tu idea como la imaginas y
+        nosotros nos encargamos de traducirla visualmente.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 with st.container(border=True):
+    st.markdown("#### 💡 Cuéntanos tu idea")
+
     objetivo_diseno = st.text_area(
         "¿Qué quieres comunicar y lograr con este diseño? *",
-        placeholder="Mensaje abierto",
+        placeholder="Cuéntanos con tus propias palabras qué representa el proyecto y qué te gustaría transmitir.",
         height=120,
         key=f"objetivo_diseno_{_gen}"
     )
 
+    st.markdown("#### 👥 ¿Para quién es este diseño?")
+
+    para_quien = st.text_area(
+        "Cuéntanos quién recibirá o disfrutará este diseño. *",
+        placeholder="Clientes · Colaboradores · Invitados · Evento social · Regalo · Conmemoración · Uso personal · Otro",
+        height=80,
+        key=f"para_quien_{_gen}"
+    )
+
+    st.markdown("#### ✨ ¿Cómo quieres que se sienta?")
+
+    sensacion_diseno = st.text_area(
+        "Describe la personalidad o sensación que tienes en mente. *",
+        placeholder="Elegante · Alegre · Mexicano · Moderno · Premium · Artístico · Minimalista · Corporativo · Romántico · Colorido · Sobrio · Tradicional · Atrevido · Nostálgico · Otro",
+        height=90,
+        key=f"sensacion_diseno_{_gen}"
+    )
+
+    st.markdown("#### 🧩 ¿Qué no puede faltar?")
+
+    elementos_graficos = st.text_area(
+        "Cuéntanos qué elementos deben aparecer sí o sí en el diseño. *",
+        placeholder=(
+            "Nombres, fechas, frases, lugares, símbolos, productos, imágenes, "
+            "identidad gráfica u otros elementos importantes."
+        ),
+        height=120,
+        key=f"elementos_graficos_{_gen}"
+    )
+
+    st.markdown("#### 🎨 ¿Hay colores que te gustaría usar o evitar?")
 
     paleta_colores = st.text_input(
-        "Colores sugeridos",
+        "Colores",
         placeholder="Opcional",
         key=f"paleta_colores_{_gen}"
     )
 
-    elementos_graficos = st.text_area(
-        "Elementos gráficos relevantes a incluir *",
-        placeholder=(
-            "Describe o pega links de todo lo que deseas que aparezca en el diseño. "
-            "Las referencias nos ayudarán a entender tu idea y tomarlas como inspiración."
-        ),
-        height=130,
-        key=f"elementos_graficos_{_gen}"
+    st.markdown("#### 🔎 ¿Hay algo que te inspire?")
+
+    inspiracion = st.text_area(
+        "Referencias o inspiración",
+        placeholder="Opcional",
+        height=90,
+        key=f"inspiracion_{_gen}"
     )
 
-    st.markdown("**📎 Adjunta tus archivos ***")
+    st.markdown("#### 📎 Adjunta tus archivos *")
 
     st.caption(
-        "Adjunta los archivos necesarios para desarrollar tu idea. "
-        "Incluye cualquier material relevante que debamos considerar, como identidad gráfica, "
-        "imágenes, fotografías, ilustraciones, textos, manuales, referencias visuales, PDFs "
-        "o archivos vectoriales (AI, EPS o SVG), según aplique a tu proyecto."
+        "Adjunta cualquier material que pueda ayudarnos a desarrollar tu idea: "
+        "imágenes, fotografías, ilustraciones, textos, identidad gráfica, manuales, "
+        "referencias visuales, PDFs o archivos vectoriales, según aplique a tu proyecto."
     )
 
     adjuntos_files = st.file_uploader(
@@ -1027,13 +1074,6 @@ with st.container(border=True):
         type=TIPOS_ADJUNTOS_PERMITIDOS,
         accept_multiple_files=True,
         key=f"adjuntos_files_{_gen}"
-    )
-
-    informacion_adicional = st.text_area(
-        "Notas / comentarios",
-        placeholder="Opcional — agrega aquí cualquier nota, comentario o indicación que consideres relevante.",
-        height=100,
-        key=f"informacion_adicional_{_gen}"
     )
 
     if adjuntos_files:
@@ -1050,7 +1090,14 @@ with st.container(border=True):
                 else:
                     st.info(f"📎 {f.name}")
 
+    st.markdown("#### 📝 Notas / comentarios")
 
+    informacion_adicional = st.text_area(
+        "Notas / comentarios",
+        placeholder="Opcional",
+        height=100,
+        key=f"informacion_adicional_{_gen}"
+    )
 
 # =========================================================
 # Validación de tamaño de adjuntos
@@ -1131,7 +1178,9 @@ campos_requeridos = {
     "Contacto responsable del proyecto": lider_nombre,
     "Celular": celular,
     "¿Qué quieres comunicar y lograr con este diseño?": objetivo_diseno,
-    "Elementos gráficos relevantes a incluir": elementos_graficos,
+    "¿Para quién es este diseño?": para_quien,
+    "¿Cómo quieres que se sienta?": sensacion_diseno,
+    "¿Qué no puede faltar?": elementos_graficos,
 }
 for etiqueta, valor in campos_requeridos.items():
     if not valor.strip():
@@ -1181,8 +1230,11 @@ if st.button(
         "presentacion_375": bool(presentacion_375),
         "presentacion_750": bool(presentacion_750),
         "objetivo_diseno": objetivo_diseno.strip(),
-        "paleta_colores": paleta_colores.strip(),
+        "para_quien": para_quien.strip(),
+        "sensacion_diseno": sensacion_diseno.strip(),
         "elementos_graficos": elementos_graficos.strip(),
+        "paleta_colores": paleta_colores.strip(),
+        "inspiracion": inspiracion.strip(),
         "informacion_adicional": informacion_adicional.strip(),
     }
 
