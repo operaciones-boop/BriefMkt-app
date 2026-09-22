@@ -132,6 +132,7 @@ ASESORES = {
     "Jorge Ocampo": "turismo@circulotequila.com",
     "Nancy Madariaga": "nancymadariaga@circulotequila.com",
     "Cinthya Sandoval": "ventas@circulotequila.com",
+    "Daniela Velasco": "ventaspersonalizacion@circulotequila.com",
     "Arturo García": "algarcia@circulotequila.com",
     "Gustavo Aguiar": "gaguiar@circulotequila.com",
     "Fabiola Chacón": "fabychacon.circulotequila@gmail.com",
@@ -685,7 +686,7 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
 
         flowables.append(Spacer(1, 0.16 * cm))
         flowables.append(section_band(
-            f"MATERIAL DE REFERENCIA ({len(archivos)} archivo{'s' if len(archivos) != 1 else ''})",
+            f"ARCHIVOS DE REFERENCIA ({len(archivos)} archivo{'s' if len(archivos) != 1 else ''})",
             "adjuntos",
         ))
         flowables.append(Spacer(1, 0.12 * cm))
@@ -825,12 +826,12 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
     story.append(Spacer(1, 0.12 * cm))
 
     bloques = [
-        ("idea", "#D39A18", "Cuéntanos tu idea - ¿Qué quieres comunicar y lograr con este diseño?", datos["objetivo_diseno"]),
-        ("personas", "#6F4A8E", "¿Para quién es este diseño?", datos["para_quien"]),
+        ("idea", "#D39A18", "Objetivo del diseño / mensaje a comunicar", datos["objetivo_diseno"]),
+        ("notas", "#76538F", "Frase o eslogan", datos["frase_eslogan"]),
+        ("colores", "#C95B63", "Colores sugeridos", datos["paleta_colores"]),
         ("sensacion", "#E39A38", "¿Cómo quieres que se sienta?", datos["sensacion_diseno"]),
-        ("elementos", "#59A862", "¿Qué no puede faltar?", datos["elementos_graficos"]),
-        ("colores", "#C95B63", "¿Hay colores que te gustaría usar o evitar?", datos["paleta_colores"]),
-        ("inspiracion", "#3E87A8", "¿Hay algo que te inspire?", datos["inspiracion"]),
+        ("elementos", "#59A862", "¿Qué elementos gráficos no pueden faltar?", datos["elementos_graficos"]),
+        ("inspiracion", "#3E87A8", "Herramientas / referencias visuales", datos["inspiracion"]),
         ("notas", "#76538F", "Notas / comentarios", datos["informacion_adicional"]),
     ]
 
@@ -838,6 +839,12 @@ def build_brief_pdf(datos: dict, adjuntos_por_seccion: dict) -> bytes:
         story.append(texto_bloque_visual(tipo, color_icono, titulo, contenido))
         if idx < len(bloques) - 1:
             story.append(Spacer(1, 0.09 * cm))
+
+    if datos["estilo_libre"]:
+        story.append(Spacer(1, 0.09 * cm))
+        story.append(texto_bloque_visual(
+            "diseno", "#252525", "Modalidad de llenado", "Estilo libre"
+        ))
 
     for titulo, archivos in adjuntos_por_seccion.items():
         story.extend(imagenes_seccion(titulo, archivos))
@@ -1019,6 +1026,17 @@ Correo principal: {datos['correo']}
 Correo adicional: {correo_adicional_txt}
 Empresa: {empresa_txt}
 Asesor: {asesor_txt}
+
+CARACTERÍSTICAS DEL DISEÑO
+Objetivo del diseño / mensaje a comunicar: {datos['objetivo_diseno'] or 'No especificado'}
+Frase o eslogan: {datos['frase_eslogan'] or 'No especificado'}
+Colores sugeridos: {datos['paleta_colores'] or 'No especificado'}
+¿Cómo quieres que se sienta?: {datos['sensacion_diseno'] or 'No especificado'}
+¿Qué elementos gráficos no pueden faltar?: {datos['elementos_graficos'] or 'No especificado'}
+Herramientas / referencias visuales: {datos['inspiracion'] or 'No especificado'}
+Notas / comentarios: {datos['informacion_adicional'] or 'No especificado'}
+Modalidad: {'Estilo libre' if datos['estilo_libre'] else 'Guiada'}
+Archivos de referencia: consulta los originales en el ZIP adjunto.
 
 En el archivo ZIP adjunto encontrarás el Brief de Diseño en PDF, junto con el material de referencia proporcionado para el desarrollo del proyecto.
 
@@ -1325,100 +1343,110 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.container(border=True):
-    st.markdown("#### 💡 Cuéntanos tu idea")
+# Al marcar Estilo libre se quita el asterisco de los campos que permiten omisión.
+marca_campo_diseno = "" if st.session_state.get(f"estilo_libre_{_gen}", False) else " *"
 
+with st.container(border=True):
+    st.markdown("#### 💡 Objetivo del diseño / mensaje a comunicar")
     objetivo_diseno = st.text_area(
-        "¿Qué quieres comunicar y lograr con este diseño? *",
+        f"¿Qué quieres comunicar y lograr con este diseño?{marca_campo_diseno}",
         placeholder="Cuéntanos con tus propias palabras qué representa el proyecto y qué te gustaría transmitir.",
         height=120,
-        key=f"objetivo_diseno_{_gen}"
+        key=f"objetivo_diseno_{_gen}",
     )
 
-    st.markdown("#### 👥 ¿Para quién es este diseño?")
+    st.markdown("#### ✍️ Frase o eslogan")
+    frase_eslogan = st.text_input(
+        f"Frase o eslogan{marca_campo_diseno}",
+        placeholder="Escribe aquí la frase que te gustaría incluir.",
+        key=f"frase_eslogan_{_gen}",
+    )
 
-    para_quien = st.text_area(
-        "Cuéntanos quién recibirá o disfrutará este diseño. *",
-        placeholder="Clientes · Colaboradores · Invitados · Evento social · Regalo · Conmemoración · Uso personal · Otro",
-        height=80,
-        key=f"para_quien_{_gen}"
+    st.markdown("#### 🎨 Colores sugeridos")
+    paleta_colores = st.text_input(
+        f"Colores sugeridos{marca_campo_diseno}",
+        placeholder="Escribe los colores que te gustaría usar o evitar.",
+        key=f"paleta_colores_{_gen}",
     )
 
     st.markdown("#### ✨ ¿Cómo quieres que se sienta?")
-
+    st.caption("Describe la personalidad o sensación que tienes en mente.")
     sensacion_diseno = st.text_area(
-        "Describe la personalidad o sensación que tienes en mente. *",
-        placeholder="Elegante · Alegre · Mexicano · Moderno · Premium · Artístico · Minimalista · Corporativo · Romántico · Colorido · Sobrio · Tradicional · Atrevido · Nostálgico · Otro",
-        height=90,
-        key=f"sensacion_diseno_{_gen}"
+        f"¿Cómo quieres que se sienta?{marca_campo_diseno}",
+        placeholder=(
+            "Elegante · Alegre · Mexicano · Moderno · Premium · Artístico · "
+            "Minimalista · Corporativo · Romántico · Divertido · Sobrio · "
+            "Tradicional · Atrevido · Nostálgico · Otro"
+        ),
+        height=95,
+        key=f"sensacion_diseno_{_gen}",
     )
 
-    st.markdown("#### 🧩 ¿Qué no puede faltar?")
-
+    st.markdown("#### 🧩 ¿Qué elementos gráficos no pueden faltar?")
+    st.caption("Cuéntanos qué elementos deben aparecer sí o sí en el diseño.")
     elementos_graficos = st.text_area(
-        "Cuéntanos qué elementos deben aparecer sí o sí en el diseño. *",
+        f"¿Qué elementos gráficos no pueden faltar?{marca_campo_diseno}",
         placeholder=(
-            "Nombres, fechas, frases, lugares, símbolos, productos, imágenes, "
-            "identidad gráfica u otros elementos importantes."
+            "Nombre comercial, palabras clave, fechas, frases, lugares, ilustraciones, "
+            "iconos, símbolos, productos, imágenes, identidad gráfica u otros elementos importantes."
         ),
         height=120,
-        key=f"elementos_graficos_{_gen}"
+        key=f"elementos_graficos_{_gen}",
     )
 
-    st.markdown("#### 🎨 ¿Hay colores que te gustaría usar o evitar?")
-
-    paleta_colores = st.text_input(
-        "Colores",
-        placeholder="Opcional",
-        key=f"paleta_colores_{_gen}"
-    )
-
-    st.markdown("#### 🔎 ¿Hay algo que te inspire?")
-
+    st.markdown("#### 🔎 Herramientas / referencias visuales")
     inspiracion = st.text_area(
-        "Referencias o inspiración",
-        placeholder="Opcional",
+        f"Herramientas / referencias visuales{marca_campo_diseno}",
+        placeholder="Describe o pega enlaces de referencias que nos ayuden a comprender tu idea.",
         height=90,
-        key=f"inspiracion_{_gen}"
+        key=f"inspiracion_{_gen}",
     )
 
-    st.markdown("#### 📎 Adjunta tus archivos *")
+    st.markdown("#### 📝 Notas / comentarios")
+    informacion_adicional = st.text_area(
+        f"Notas / comentarios{marca_campo_diseno}",
+        placeholder="Agrega cualquier indicación adicional importante.",
+        height=100,
+        key=f"informacion_adicional_{_gen}",
+    )
 
+    st.markdown("#### 📎 Archivos de referencia *")
     st.caption(
-        "Adjunta cualquier material que pueda ayudarnos a desarrollar tu idea: "
-        "imágenes, fotografías, ilustraciones, textos, identidad gráfica, manuales, "
-        "referencias visuales, PDFs o archivos vectoriales, según aplique a tu proyecto."
+        "Adjunta al menos un archivo que nos ayude a desarrollar tu idea: fotografías, "
+        "ilustraciones, textos, identidad gráfica, manuales, PDFs o referencias visuales, "
+        "según corresponda a tu proyecto."
     )
-
     adjuntos_files = st.file_uploader(
-        "Adjuntar archivos",
+        "Adjuntar archivos *",
         type=TIPOS_ADJUNTOS_PERMITIDOS,
         accept_multiple_files=True,
-        key=f"adjuntos_files_{_gen}"
+        key=f"adjuntos_files_{_gen}",
     )
 
     if adjuntos_files:
         cols_adjuntos = st.columns(4)
-
         for fi, f in enumerate(adjuntos_files):
             with cols_adjuntos[fi % 4]:
                 if es_imagen(f.name):
-                    st.image(
-                        f.getvalue(),
-                        caption=f.name,
-                        width=160
-                    )
+                    st.image(f.getvalue(), caption=f.name, width=160)
                 else:
                     st.info(f"📎 {f.name}")
 
-    st.markdown("#### 📝 Notas / comentarios")
-
-    informacion_adicional = st.text_area(
-        "Notas / comentarios",
-        placeholder="Opcional",
-        height=100,
-        key=f"informacion_adicional_{_gen}"
+    estilo_libre = st.checkbox(
+        "Estilo libre",
+        help=(
+            "Al activar esta opción puedes dejar vacíos los campos de Características "
+            "del diseño. Los datos generales, la presentación, la confirmación y "
+            "al menos un archivo adjunto siguen siendo obligatorios."
+        ),
+        key=f"estilo_libre_{_gen}",
     )
+
+st.caption(
+    'Si deseas omitir alguna respuesta, escribe un guion «-» en el campo correspondiente. '
+    'Si marcas «Estilo libre», puedes dejar vacíos los campos de esta sección. '
+    'Adjuntar al menos un archivo siempre es obligatorio.'
+)
 
 # =========================================================
 # Validación de tamaño de adjuntos
@@ -1497,15 +1525,23 @@ with st.container(border=True):
 
 # Validaciones
 errores = []
+# Los datos generales siempre son obligatorios.
 campos_requeridos = {
     "Nombre del proyecto": nombre_proyecto,
     "Contacto responsable del proyecto": lider_nombre,
     "Celular": celular,
-    "¿Qué quieres comunicar y lograr con este diseño?": objetivo_diseno,
-    "¿Para quién es este diseño?": para_quien,
-    "¿Cómo quieres que se sienta?": sensacion_diseno,
-    "¿Qué no puede faltar?": elementos_graficos,
 }
+# Estilo libre permite omitir únicamente los siete campos de este bloque.
+if not estilo_libre:
+    campos_requeridos.update({
+        "Objetivo del diseño / mensaje a comunicar": objetivo_diseno,
+        "Frase o eslogan": frase_eslogan,
+        "Colores sugeridos": paleta_colores,
+        "¿Cómo quieres que se sienta?": sensacion_diseno,
+        "¿Qué elementos gráficos no pueden faltar?": elementos_graficos,
+        "Herramientas / referencias visuales": inspiracion,
+        "Notas / comentarios": informacion_adicional,
+    })
 for etiqueta, valor in campos_requeridos.items():
     if not valor.strip():
         errores.append(f"• {etiqueta}")
@@ -1565,12 +1601,13 @@ if st.button(
         "presentacion_375": bool(presentacion_375),
         "presentacion_750": bool(presentacion_750),
         "objetivo_diseno": objetivo_diseno.strip(),
-        "para_quien": para_quien.strip(),
+        "frase_eslogan": frase_eslogan.strip(),
+        "paleta_colores": paleta_colores.strip(),
         "sensacion_diseno": sensacion_diseno.strip(),
         "elementos_graficos": elementos_graficos.strip(),
-        "paleta_colores": paleta_colores.strip(),
         "inspiracion": inspiracion.strip(),
         "informacion_adicional": informacion_adicional.strip(),
+        "estilo_libre": bool(estilo_libre),
     }
 
     adjuntos_por_seccion = {
