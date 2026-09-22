@@ -1,3 +1,6 @@
+
+
+
 import io
 import zipfile
 import smtplib
@@ -1343,36 +1346,43 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Al marcar Estilo libre se quita el asterisco de los campos que permiten omisión.
+# Cuando se marca Estilo libre, desaparecen los asteriscos de las preguntas
+# de diseño. El estado se consulta antes de dibujar los campos; Streamlit
+# vuelve a ejecutar el script al cambiar la casilla.
 marca_campo_diseno = "" if st.session_state.get(f"estilo_libre_{_gen}", False) else " *"
 
 with st.container(border=True):
-    st.markdown("#### 💡 Objetivo del diseño / mensaje a comunicar")
+    # Los labels internos permanecen para accesibilidad, pero se colapsan
+    # visualmente porque los títulos con icono ya muestran la pregunta.
+    st.markdown(f"#### 💡 Objetivo del diseño / mensaje a comunicar{marca_campo_diseno}")
     objetivo_diseno = st.text_area(
-        f"¿Qué quieres comunicar y lograr con este diseño?{marca_campo_diseno}",
+        "¿Qué quieres comunicar y lograr con este diseño?",
         placeholder="Cuéntanos con tus propias palabras qué representa el proyecto y qué te gustaría transmitir.",
         height=120,
         key=f"objetivo_diseno_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### ✍️ Frase o eslogan")
+    st.markdown(f"#### ✍️ Frase o eslogan{marca_campo_diseno}")
     frase_eslogan = st.text_input(
-        f"Frase o eslogan{marca_campo_diseno}",
+        "Frase o eslogan",
         placeholder="Escribe aquí la frase que te gustaría incluir.",
         key=f"frase_eslogan_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### 🎨 Colores sugeridos")
+    st.markdown(f"#### 🎨 Colores sugeridos{marca_campo_diseno}")
     paleta_colores = st.text_input(
-        f"Colores sugeridos{marca_campo_diseno}",
+        "Colores sugeridos",
         placeholder="Escribe los colores que te gustaría usar o evitar.",
         key=f"paleta_colores_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### ✨ ¿Cómo quieres que se sienta?")
+    st.markdown(f"#### ✨ ¿Cómo quieres que se sienta?{marca_campo_diseno}")
     st.caption("Describe la personalidad o sensación que tienes en mente.")
     sensacion_diseno = st.text_area(
-        f"¿Cómo quieres que se sienta?{marca_campo_diseno}",
+        "¿Cómo quieres que se sienta?",
         placeholder=(
             "Elegante · Alegre · Mexicano · Moderno · Premium · Artístico · "
             "Minimalista · Corporativo · Romántico · Divertido · Sobrio · "
@@ -1380,35 +1390,60 @@ with st.container(border=True):
         ),
         height=95,
         key=f"sensacion_diseno_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### 🧩 ¿Qué elementos gráficos no pueden faltar?")
+    st.markdown(f"#### 🧩 ¿Qué elementos gráficos no pueden faltar?{marca_campo_diseno}")
     st.caption("Cuéntanos qué elementos deben aparecer sí o sí en el diseño.")
     elementos_graficos = st.text_area(
-        f"¿Qué elementos gráficos no pueden faltar?{marca_campo_diseno}",
+        "¿Qué elementos gráficos no pueden faltar?",
         placeholder=(
             "Nombre comercial, palabras clave, fechas, frases, lugares, ilustraciones, "
             "iconos, símbolos, productos, imágenes, identidad gráfica u otros elementos importantes."
         ),
         height=120,
         key=f"elementos_graficos_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### 🔎 Herramientas / referencias visuales")
+    st.markdown(f"#### 🔎 Herramientas / referencias visuales{marca_campo_diseno}")
     inspiracion = st.text_area(
-        f"Herramientas / referencias visuales{marca_campo_diseno}",
+        "Herramientas / referencias visuales",
         placeholder="Describe o pega enlaces de referencias que nos ayuden a comprender tu idea.",
         height=90,
         key=f"inspiracion_{_gen}",
+        label_visibility="collapsed",
     )
 
-    st.markdown("#### 📝 Notas / comentarios")
+    st.markdown(f"#### 📝 Notas / comentarios{marca_campo_diseno}")
     informacion_adicional = st.text_area(
-        f"Notas / comentarios{marca_campo_diseno}",
+        "Notas / comentarios",
         placeholder="Agrega cualquier indicación adicional importante.",
         height=100,
         key=f"informacion_adicional_{_gen}",
+        label_visibility="collapsed",
     )
+
+    # La opción auxiliar va después de las preguntas y antes de los archivos.
+    with st.container(border=True):
+        st.markdown("#### 💡 ¿Prefieres dejarlo a nuestra creatividad?")
+        st.write(
+            "Nuestro equipo de Diseño propondrá una idea para ti. "
+            "Si tienes comentarios o te inspira alguna botella de «Conoce algunos diseños», "
+            "menciónala en Notas / comentarios."
+        )
+        st.caption(
+            "Las referencias orientan la técnica o composición visual; no implican reproducir otro diseño."
+        )
+        estilo_libre = st.checkbox(
+            "Estilo libre: deseo que Diseño proponga una idea.",
+            help=(
+                "Permite dejar vacíos los siete campos de Características del diseño. "
+                "Los datos generales, la presentación, la confirmación y al menos un archivo "
+                "adjunto siguen siendo obligatorios."
+            ),
+            key=f"estilo_libre_{_gen}",
+        )
 
     st.markdown("#### 📎 Archivos de referencia *")
     st.caption(
@@ -1417,10 +1452,11 @@ with st.container(border=True):
         "según corresponda a tu proyecto."
     )
     adjuntos_files = st.file_uploader(
-        "Adjuntar archivos *",
+        "Adjuntar archivos",
         type=TIPOS_ADJUNTOS_PERMITIDOS,
         accept_multiple_files=True,
         key=f"adjuntos_files_{_gen}",
+        label_visibility="collapsed",
     )
 
     if adjuntos_files:
@@ -1432,19 +1468,9 @@ with st.container(border=True):
                 else:
                     st.info(f"📎 {f.name}")
 
-    estilo_libre = st.checkbox(
-        "Estilo libre",
-        help=(
-            "Al activar esta opción puedes dejar vacíos los campos de Características "
-            "del diseño. Los datos generales, la presentación, la confirmación y "
-            "al menos un archivo adjunto siguen siendo obligatorios."
-        ),
-        key=f"estilo_libre_{_gen}",
-    )
-
 st.caption(
-    'Si deseas omitir alguna respuesta, escribe un guion «-» en el campo correspondiente. '
-    'Si marcas «Estilo libre», puedes dejar vacíos los campos de esta sección. '
+    'Si deseas omitir alguna respuesta, escribe «-» en el campo correspondiente. '
+    'Con «Estilo libre» puedes dejar vacíos los campos de diseño. '
     'Adjuntar al menos un archivo siempre es obligatorio.'
 )
 
