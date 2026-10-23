@@ -135,7 +135,7 @@ ASESORES = {
     "Jorge Ocampo": "turismo@circulotequila.com",
     "Nancy Madariaga": "nancymadariaga@circulotequila.com",
     "Cinthya Sandoval": "ventas@circulotequila.com",
-    "Daniela Velasco": "ventaspersonalizacion@circulotequila.com",
+    "Daniela Velasco": "d.velasco@circulotequila.com",
     "Arturo García": "algarcia@circulotequila.com",
     "Gustavo Aguiar": "gaguiar@circulotequila.com",
     "Fabiola Chacón": "fabychacon.circulotequila@gmail.com",
