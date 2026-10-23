@@ -144,7 +144,7 @@ ASESORES = {
     "Kenia Torres": "mktdigital@circulotequila.com",
     "Ricardo Salcedo": "rsalcedo@circulotequila.com",
     "Israel Chavira": "ichavira@circulotequila.com",
-    "Antonio Rodríguez": "operaciones@circulotequila.com",
+    "Antonio Rodriguez": "operaciones@circulotequila.com",
 }
 
 ASESOR_OTRO = "Otro / No aparece en la lista"
